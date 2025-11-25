@@ -1,4 +1,4 @@
-const sequelize = require("../lib/sequelize");
+const { sequelize } = require("../lib/sequelize");
 const Bouquet = require("./Bouquet");
 const Order = require("./Order");
 const OrderLog = require("./OrderLog");

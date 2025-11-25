@@ -29,17 +29,36 @@ export default function SettingsPage() {
       setLoading(true);
       const response = await fetch('/api/settings');
       const data = await response.json();
+      
+      console.log('Raw settings data:', data.data); // Debug log
 
       if (data.success) {
-        setSettings({
-          payment_bca: data.data.payment_bca?.value || '',
-          payment_bca_desc: data.data.payment_bca?.description || '',
-          payment_seabank: data.data.payment_seabank?.value || '',
-          payment_seabank_desc: data.data.payment_seabank?.description || '',
-          payment_shopeepay: data.data.payment_shopeepay?.value || '',
-          payment_shopeepay_desc: data.data.payment_shopeepay?.description || '',
-          whatsapp_number: data.data.whatsapp_number?.value || data.data.whatsapp_number || '',
-        });
+        // Safely extract values and descriptions, ensuring they're strings not objects
+        const extractValue = (item) => {
+          if (!item) return '';
+          if (typeof item === 'string') return item;
+          if (typeof item === 'object' && item.value !== undefined) return String(item.value || '');
+          return '';
+        };
+        
+        const extractDescription = (item) => {
+          if (!item) return '';
+          if (typeof item === 'object' && item.description !== undefined) return String(item.description || '');
+          return '';
+        };
+        
+        const newSettings = {
+          payment_bca: extractValue(data.data.payment_bca),
+          payment_bca_desc: extractDescription(data.data.payment_bca),
+          payment_seabank: extractValue(data.data.payment_seabank),
+          payment_seabank_desc: extractDescription(data.data.payment_seabank),
+          payment_shopeepay: extractValue(data.data.payment_shopeepay),
+          payment_shopeepay_desc: extractDescription(data.data.payment_shopeepay),
+          whatsapp_number: extractValue(data.data.whatsapp_number),
+        };
+        
+        console.log('Extracted settings:', newSettings); // Debug log
+        setSettings(newSettings);
       }
     } catch (error) {
       console.error('Fetch settings error:', error);
@@ -270,7 +289,7 @@ export default function SettingsPage() {
             </div>
             
             {/* Format Preview */}
-            {settings.whatsapp_number && (
+            {settings.whatsapp_number && typeof settings.whatsapp_number === 'string' && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                 <div className="flex items-start gap-2">
                   <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -278,9 +297,9 @@ export default function SettingsPage() {
                   </svg>
                   <div className="flex-1">
                     <p className="text-xs font-medium text-green-800 mb-1">Format Tersimpan:</p>
-                    <p className="text-sm font-mono font-semibold text-green-700">+{settings.whatsapp_number}</p>
+                    <p className="text-sm font-mono font-semibold text-green-700">+{String(settings.whatsapp_number)}</p>
                     <p className="text-xs text-green-600 mt-1">
-                      Link WhatsApp: wa.me/{settings.whatsapp_number}
+                      Link WhatsApp: wa.me/{String(settings.whatsapp_number)}
                     </p>
                   </div>
                 </div>

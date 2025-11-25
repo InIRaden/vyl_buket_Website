@@ -714,19 +714,19 @@ function OrderPageContent() {
                     className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target cursor-pointer bg-white"
                   >
                     <option value="">Pilih metode pembayaran</option>
-                    {settings?.payment_bca?.value && (
+                    {settings && settings.payment_bca && settings.payment_bca.value && (
                       <option value="bca">
-                        BCA - {settings.payment_bca.value}{settings.payment_bca.description ? ` a.n ${settings.payment_bca.description}` : ''}
+                        BCA - {String(settings.payment_bca.value)}{settings.payment_bca.description && typeof settings.payment_bca.description === 'string' ? ` a.n ${settings.payment_bca.description}` : ''}
                       </option>
                     )}
-                    {settings?.payment_seabank?.value && (
+                    {settings && settings.payment_seabank && settings.payment_seabank.value && (
                       <option value="seabank">
-                        SeaBank - {settings.payment_seabank.value}{settings.payment_seabank.description ? ` a.n ${settings.payment_seabank.description}` : ''}
+                        SeaBank - {String(settings.payment_seabank.value)}{settings.payment_seabank.description && typeof settings.payment_seabank.description === 'string' ? ` a.n ${settings.payment_seabank.description}` : ''}
                       </option>
                     )}
-                    {settings?.payment_shopeepay?.value && (
+                    {settings && settings.payment_shopeepay && settings.payment_shopeepay.value && (
                       <option value="shopeepay">
-                        ShopeePay - {settings.payment_shopeepay.value}{settings.payment_shopeepay.description ? ` a.n ${settings.payment_shopeepay.description}` : ''}
+                        ShopeePay - {String(settings.payment_shopeepay.value)}{settings.payment_shopeepay.description && typeof settings.payment_shopeepay.description === 'string' ? ` a.n ${settings.payment_shopeepay.description}` : ''}
                       </option>
                     )}
                   </select>
@@ -804,27 +804,27 @@ function OrderPageContent() {
                   Metode Pembayaran
                 </h3>
                 <div className="text-xs sm:text-sm space-y-2">
-                  {settings?.payment_bca?.value && (
+                  {settings && settings.payment_bca && settings.payment_bca.value && (
                     <div>
-                      <strong>BCA:</strong> {settings.payment_bca.value}
+                      <strong>BCA:</strong> {String(settings.payment_bca.value)}
                       {settings.payment_bca.description && (
-                        <span className="text-gray-600"> a.n {settings.payment_bca.description}</span>
+                        <span className="text-gray-600"> a.n {String(settings.payment_bca.description)}</span>
                       )}
                     </div>
                   )}
-                  {settings?.payment_seabank?.value && (
+                  {settings && settings.payment_seabank && settings.payment_seabank.value && (
                     <div>
-                      <strong>SeaBank:</strong> {settings.payment_seabank.value}
+                      <strong>SeaBank:</strong> {String(settings.payment_seabank.value)}
                       {settings.payment_seabank.description && (
-                        <span className="text-gray-600"> a.n {settings.payment_seabank.description}</span>
+                        <span className="text-gray-600"> a.n {String(settings.payment_seabank.description)}</span>
                       )}
                     </div>
                   )}
-                  {settings?.payment_shopeepay?.value && (
+                  {settings && settings.payment_shopeepay && settings.payment_shopeepay.value && (
                     <div>
-                      <strong>ShopeePay:</strong> {settings.payment_shopeepay.value}
+                      <strong>ShopeePay:</strong> {String(settings.payment_shopeepay.value)}
                       {settings.payment_shopeepay.description && (
-                        <span className="text-gray-600"> a.n {settings.payment_shopeepay.description}</span>
+                        <span className="text-gray-600"> a.n {String(settings.payment_shopeepay.description)}</span>
                       )}
                     </div>
                   )}

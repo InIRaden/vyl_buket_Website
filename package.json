@@ -5,8 +5,18 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "NODE_ENV=production node server.js",
+    "start:standalone": "node .next/standalone/server.js",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop vyl-bouquet",
+    "pm2:restart": "pm2 restart vyl-bouquet",
+    "pm2:logs": "pm2 logs vyl-bouquet",
+    "pm2:monit": "pm2 monit",
     "lint": "next lint"
+  },
+  "engines": {
+    "node": ">=18.17.0",
+    "npm": ">=9.6.7"
   },
   "dependencies": {
     "@heroicons/react": "^2.1.5",

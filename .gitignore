@@ -29,6 +29,28 @@ yarn-error.log*
 .env
 .env.local
 
+# deployment
+deploy/
+*.zip
+vyl-bouquet-deploy.zip
+
+# logs
+logs/
+*.log
+pm2-*.log
+
+# cPanel
+.cpanel/
+.htaccess.backup
+
+# OS
+.DS_Store
+Thumbs.db
+
+# npm
+.npm-cache/
+package-lock.json.backup
+
 # vercel
 .vercel
 

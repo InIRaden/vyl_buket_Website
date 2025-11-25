@@ -23,6 +23,8 @@ export async function GET(request) {
       attributes: [
         "id",
         "customer_name",
+        "bouquet_name",
+        "custom_bouquet_type",
         "pickup_date",
         "order_status",
         "payment_status",
