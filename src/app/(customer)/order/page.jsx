@@ -32,11 +32,10 @@ function OrderPageContent() {
     card_message: "",
     additional_request: "",
     payment_type: "DP",
-    payment_channel: 'BCA',
+    payment_method: "",
     sender_name: "",
     sender_account_number: "",
     sender_phone: "",
-    payment_method: "",
   });
 
   const [referenceFiles, setReferenceFiles] = useState([]);
@@ -324,6 +323,7 @@ function OrderPageContent() {
         pickup_time: saved.pickup_time,
         card_message: saved.card_message,
         payment_type: saved.payment_type,
+        payment_method: saved.payment_method,
         dp_amount: saved.dp_amount,
         remaining_amount: saved.remaining_amount,
         created_at: saved.created_at,
@@ -351,12 +351,12 @@ function OrderPageContent() {
     if (!selectedBouquet) return { dp: 0, remaining: 0, total: 0 };
     const base = parseFloat(selectedBouquet.price) || 0;
     // surcharge +Rp 1.000 for ShopeePay channel
-    const surcharge = (formData.payment_method === 'shopeepay' || formData.payment_channel === 'SHOPEEPAY') ? 1000 : 0;
+    const surcharge = (formData.payment_method === 'SHOPEEPAY' || formData.payment_method?.toLowerCase() === 'shopeepay') ? 1000 : 0;
     const total = base + surcharge;
     const dp = formData.payment_type === "DP" ? total * 0.3 : total;
     const remaining = formData.payment_type === "DP" ? total - dp : 0;
     return { dp, remaining, total };
-  }, [selectedBouquet, formData.payment_type, formData.payment_method, formData.payment_channel]);
+  }, [selectedBouquet, formData.payment_type, formData.payment_method]);
 
   return (
     <>

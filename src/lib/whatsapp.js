@@ -53,9 +53,20 @@ export function formatOrderWhatsAppMessage(order, settings) {
     message += `_"${order.card_message}"_\n\n`;
   }
 
+  // Format payment method untuk ditampilkan dengan lebih bagus
+  const formatPaymentMethod = (method) => {
+    if (!method) return '-';
+    const methodMap = {
+      'bca': 'BCA',
+      'seabank': 'SeaBank',
+      'shopeepay': 'ShopeePay'
+    };
+    return methodMap[method.toLowerCase()] || method.toUpperCase();
+  };
+
   message += `📅 *Tanggal Pengambilan:* ${formattedDate}\n`;
   message += `⏰ *Jam Pengambilan:* ${order.pickup_time} WIB\n`;
-  message += `💳 *Metode Pembayaran:* ${order.payment_method}\n`;
+  message += `💳 *Metode Pembayaran:* ${formatPaymentMethod(order.payment_method)}\n`;
   message += `💸 *Jenis Pembayaran:* ${order.payment_type === 'DP' ? `DP 30% (Rp ${formatPrice(order.dp_amount)})` : `Lunas (Rp ${formatPrice(order.bouquet_price)})`}\n\n`;
 
   // Request tambahan
