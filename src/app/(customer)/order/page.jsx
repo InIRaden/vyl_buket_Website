@@ -289,6 +289,15 @@ function OrderPageContent() {
       if (!data.success) throw new Error(data.message || "Gagal membuat pesanan");
 
       const saved = data.data || data;
+      
+      // Clear any old cached data before saving new order
+      try {
+        localStorage.removeItem("lastOrder");
+        localStorage.removeItem("lastOrderId");
+      } catch (err) {
+        console.warn("Could not clear old cache", err);
+      }
+      
       try {
         localStorage.setItem("lastOrder", JSON.stringify(saved));
         const idKey = saved?.order_number || saved?.id || saved?.order_id || "";
@@ -297,32 +306,32 @@ function OrderPageContent() {
         console.warn("Could not save lastOrder", err);
       }
 
-      // Build WA message and open seller chat in new tab, then redirect to order-success
-      try {
-        const waData = settings?.whatsapp_number;
-        const whatsappNumber = (typeof waData === 'object' && waData?.value) ? waData.value : (typeof waData === 'string' ? waData : null);
-        
-        if (!whatsappNumber) {
-          console.error('WhatsApp number not configured');
-          showToast.error('Nomor WhatsApp tidak tersedia');
-        } else {
-          // Format message menggunakan fungsi dari whatsapp.js
-          const formattedMessage = formatOrderWhatsAppMessage(saved, settings);
-          
-          const waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(formattedMessage)}`;
-          // open WA in new tab/window
-          window.open(waUrl, '_blank');
-        }
-      } catch (err) {
-        console.error('Could not open WhatsApp link', err);
-        showToast.error('Gagal membuka WhatsApp');
-      }
-
+      // Tidak auto-open WhatsApp, user bisa klik manual di halaman order-success
+      
       showToast.success(
         `Pesanan berhasil! Nomor Order: ${saved.order_number || saved.id || ""}`
       );
-      // navigate to order-success
-      router.push("/order-success");
+      
+      // Navigate to order-success dengan data order di URL
+      // Encode data order ke base64 untuk dikirim via URL
+      const orderDataToPass = {
+        id: saved.id,
+        order_number: saved.order_number,
+        customer_name: saved.customer_name,
+        bouquet_name: saved.bouquet?.name || saved.bouquet_name,
+        bouquet_price: saved.bouquet?.price || saved.bouquet_price,
+        pickup_date: saved.pickup_date,
+        pickup_time: saved.pickup_time,
+        card_message: saved.card_message,
+        payment_type: saved.payment_type,
+        dp_amount: saved.dp_amount,
+        remaining_amount: saved.remaining_amount,
+        created_at: saved.created_at,
+        bouquet: saved.bouquet
+      };
+      
+      const encodedData = btoa(encodeURIComponent(JSON.stringify(orderDataToPass)));
+      router.push(`/order-success?data=${encodedData}`);
     } catch (error) {
       showToast.error(`Error: ${error?.message || error}`);
     } finally {
