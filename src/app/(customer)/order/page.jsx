@@ -236,8 +236,8 @@ function OrderPageContent() {
       return;
     }
     
-    if (numValue > 100) {
-      setQuantityError('Jumlah pesanan terlalu banyak. Silakan hubungi admin untuk pemesanan di atas 100 buket');
+    if (numValue > 500) {
+      setQuantityError('Jumlah pesanan maksimal 500 buket. Untuk pemesanan lebih dari 500, silakan hubungi admin');
       setFormData({ ...formData, quantity: numValue });
       return;
     }
@@ -283,8 +283,8 @@ function OrderPageContent() {
       return;
     }
 
-    if (formData.quantity > 100) {
-      setQuantityError('Jumlah pesanan terlalu banyak. Silakan hubungi admin untuk pemesanan di atas 100 buket');
+    if (formData.quantity > 500) {
+      setQuantityError('Jumlah pesanan maksimal 500 buket. Untuk pemesanan lebih dari 500, silakan hubungi admin');
       showToast.error('Jumlah pesanan tidak valid');
       return;
     }
@@ -400,16 +400,16 @@ function OrderPageContent() {
   };
 
   const payment = useMemo(() => {
-    if (!selectedBouquet) return { dp: 0, remaining: 0, total: 0 };
+    if (!selectedBouquet) return { dp: 0, remaining: 0, total: 0, subtotal: 0, surcharge: 0 };
     const base = parseFloat(selectedBouquet.price) || 0;
     const quantity = parseInt(formData.quantity) || 0;
     const subtotal = base * quantity;
-    // surcharge +Rp 1.000 for ShopeePay channel
-    const surcharge = (formData.payment_method === 'SHOPEEPAY' || formData.payment_method?.toLowerCase() === 'shopeepay') ? 1000 : 0;
+    // Biaya admin +Rp 1.000 untuk ShopeePay
+    const surcharge = (formData.payment_method === 'shopeepay' || formData.payment_method?.toLowerCase() === 'shopeepay') ? 1000 : 0;
     const total = subtotal + surcharge;
     const dp = formData.payment_type === "DP" ? total * 0.3 : total;
     const remaining = formData.payment_type === "DP" ? total - dp : 0;
-    return { dp, remaining, total };
+    return { dp, remaining, total, subtotal, surcharge };
   }, [selectedBouquet, formData.payment_type, formData.payment_method, formData.quantity]);
 
   return (
@@ -527,6 +527,8 @@ function OrderPageContent() {
                   </label>
                   <input
                     type="number"
+                    min="1"
+                    max="500"
                     value={formData.quantity}
                     onChange={handleQuantityChange}
                     className={`w-full px-3 py-2.5 md:py-2 border rounded-md focus:ring-2 focus:ring-pink-300 transition-all text-sm sm:text-base touch-target ${
@@ -539,7 +541,7 @@ function OrderPageContent() {
                   {quantityError ? (
                     <p className="text-xs text-red-600 mt-1 font-medium">{quantityError}</p>
                   ) : (
-                    <p className="text-xs text-gray-500 mt-1">Minimal 1 buket</p>
+                    <p className="text-xs text-gray-500 mt-1">Minimal 1, maksimal 500 buket</p>
                   )}
                 </div>
 
@@ -861,6 +863,20 @@ function OrderPageContent() {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Harga Buket</span>
                     <span className="font-semibold text-gray-900">
+                      {selectedBouquet ? formatPrice(payment.subtotal) : "Rp ..."}
+                    </span>
+                  </div>
+                  {payment.surcharge > 0 && (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-600">Biaya Admin ShopeePay</span>
+                      <span className="text-orange-600 font-medium">
+                        + {formatPrice(payment.surcharge)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center pt-2 border-t border-pink-200">
+                    <span className="text-gray-700 font-medium">Total</span>
+                    <span className="font-bold text-gray-900">
                       {selectedBouquet ? formatPrice(payment.total) : "Rp ..."}
                     </span>
                   </div>
@@ -912,11 +928,9 @@ function OrderPageContent() {
                       {settings.payment_shopeepay.description && (
                         <span className="text-gray-600"> a.n {String(settings.payment_shopeepay.description)}</span>
                       )}
+                      <span className="block text-orange-600 font-medium mt-0.5">+ Biaya admin Rp 1.000</span>
                     </div>
                   )}
-                  <p className="text-xs text-pink-400 mt-2">
-                    💡 Transfer ShopeePay dari bank dikenakan biaya admin +Rp 1.000
-                  </p>
                 </div>
               </div>
 

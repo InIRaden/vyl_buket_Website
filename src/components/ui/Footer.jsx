@@ -42,7 +42,7 @@ export default function Footer() {
               <h3 className="text-xl font-serif font-bold text-pink-400">Vyl bouquet</h3>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Menciptakan momen spesial dengan rangkaian bunga segar dan elegan untuk setiap kesempatan
+Menciptakan momen spesial dengan rangkaian bunga artificial dan elegan untuk setiap kesempatan
             </p>
           </div>
 

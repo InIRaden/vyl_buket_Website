@@ -14,7 +14,12 @@ export default function DashboardPage() {
     confirmed: 0,
     inProcess: 0,
     ready: 0,
-    completed: 0
+    completed: 0,
+    waitingQty: 0,
+    confirmedQty: 0,
+    inProcessQty: 0,
+    readyQty: 0,
+    completedQty: 0
   });
   const [recentOrders, setRecentOrders] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -92,6 +97,7 @@ export default function DashboardPage() {
             <ClockIcon className="w-5 h-5 sm:w-7 sm:h-7 text-yellow-500" />
           </div>
           <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.waiting}</p>
+          <p className="text-[10px] sm:text-xs text-gray-500 mt-1">{stats.waitingQty} buket</p>
         </div>
         
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-3 sm:p-5">
@@ -100,6 +106,7 @@ export default function DashboardPage() {
             <CheckCircleIcon className="w-5 h-5 sm:w-7 sm:h-7 text-blue-500" />
           </div>
           <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.confirmed}</p>
+          <p className="text-[10px] sm:text-xs text-gray-500 mt-1">{stats.confirmedQty} buket</p>
         </div>
         
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-3 sm:p-5">
@@ -108,6 +115,7 @@ export default function DashboardPage() {
             <CubeIcon className="w-5 h-5 sm:w-7 sm:h-7 text-purple-500" />
           </div>
           <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.inProcess}</p>
+          <p className="text-[10px] sm:text-xs text-gray-500 mt-1">{stats.inProcessQty} buket</p>
         </div>
 
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-3 sm:p-5">
@@ -116,6 +124,7 @@ export default function DashboardPage() {
             <CubeIcon className="w-5 h-5 sm:w-7 sm:h-7 text-green-500" />
           </div>
           <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.ready}</p>
+          <p className="text-[10px] sm:text-xs text-gray-500 mt-1">{stats.readyQty} buket</p>
         </div>
 
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-3 sm:p-5">
@@ -124,6 +133,7 @@ export default function DashboardPage() {
             <CheckIcon className="w-5 h-5 sm:w-7 sm:h-7 text-gray-500" />
           </div>
           <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.completed}</p>
+          <p className="text-[10px] sm:text-xs text-gray-500 mt-1">{stats.completedQty} buket</p>
         </div>
       </div>
       
@@ -156,7 +166,7 @@ export default function DashboardPage() {
                       {order.customer_name}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-700">
-                      {order.bouquet_name || order.custom_bouquet_type || 'Custom'}
+                      {order.bouquet?.name || '-'}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600">
                       {new Date(order.pickup_date).toLocaleDateString('id-ID', { 

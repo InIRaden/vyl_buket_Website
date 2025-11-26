@@ -258,7 +258,10 @@ export async function POST(request) {
 
     // Hitung payment
     const quantity = parseInt(body.quantity) || 1;
-    const bouquetPrice = parseFloat(bouquet.price) * quantity;
+    const subtotal = parseFloat(bouquet.price) * quantity;
+    // Biaya admin +Rp 1.000 untuk ShopeePay
+    const surcharge = (body.payment_method === 'shopeepay' || body.payment_method?.toLowerCase() === 'shopeepay') ? 1000 : 0;
+    const bouquetPrice = subtotal + surcharge;
     let dpAmount = 0;
     let remainingAmount = 0;
     let totalPaid = 0;
