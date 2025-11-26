@@ -44,6 +44,7 @@ export function formatOrderWhatsAppMessage(order, settings) {
   message += `📝 *No. Pesanan:* ${order.order_number}\n`;
   message += `👤 *Nama:* ${order.customer_name}\n`;
   message += `💐 *Buket:* ${order.bouquet?.name || 'Custom'}\n`;
+  message += `🔢 *Jumlah:* ${order.quantity || 1} buket\n`;
   message += `💰 *Harga Buket:* Rp ${formatPrice(order.bouquet_price)}\n`;
   message += `📊 *Status:* Menunggu Konfirmasi Pembayaran\n\n`;
 

@@ -243,6 +243,7 @@ export default function OrderDetailPage({ params }) {
                   )}
                   <div className="flex-1">
                     <p className="font-semibold text-base sm:text-lg">{order.bouquet?.name || 'Custom'}</p>
+                    <p className="text-sm text-gray-600 mt-1">Jumlah: <span className="font-semibold text-gray-900">{order.quantity || 1} buket</span></p>
                     <p className="text-primary font-bold text-lg sm:text-xl mt-1">{formatPrice(order.bouquet_price)}</p>
                     {order.bouquet?.description && (
                       <p className="text-sm text-gray-600 mt-2 line-clamp-2">{order.bouquet.description}</p>

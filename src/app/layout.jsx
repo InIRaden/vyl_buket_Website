@@ -5,8 +5,11 @@ import ToastProvider from '../components/providers/ToastProvider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'VYL Buket',
+  title: 'vylbouquet',
   description: 'Pesan buket cantik untuk momen spesial Anda',
+  icons: {
+    icon: '/logo-removebg-preview.png',
+  },
 }
 
 export default function RootLayout({ children }) {

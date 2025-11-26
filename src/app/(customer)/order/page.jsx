@@ -26,6 +26,7 @@ function OrderPageContent() {
 
   const [formData, setFormData] = useState({
     customer_name: "",
+    quantity: 1,
     bouquet_id: bouquetIdParam || "",
     pickup_date: "",
     pickup_time: "",
@@ -47,6 +48,7 @@ function OrderPageContent() {
   const [timeError, setTimeError] = useState('');
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  const [quantityError, setQuantityError] = useState('');
 
   // Set minimum date (today)
   useEffect(() => {
@@ -209,6 +211,42 @@ function OrderPageContent() {
     else if (type === "payment") setPaymentFiles(files);
   };
 
+  const handleQuantityChange = (e) => {
+    const value = e.target.value;
+    
+    // Allow empty input (user is typing)
+    if (value === '') {
+      setFormData({ ...formData, quantity: '' });
+      setQuantityError('');
+      return;
+    }
+    
+    const numValue = parseInt(value);
+    
+    // Check for invalid numbers
+    if (isNaN(numValue)) {
+      setQuantityError('Harap masukkan angka yang valid');
+      setFormData({ ...formData, quantity: value });
+      return;
+    }
+    
+    if (numValue <= 0) {
+      setQuantityError('Jumlah pesanan minimal 1 buket');
+      setFormData({ ...formData, quantity: numValue });
+      return;
+    }
+    
+    if (numValue > 100) {
+      setQuantityError('Jumlah pesanan terlalu banyak. Silakan hubungi admin untuk pemesanan di atas 100 buket');
+      setFormData({ ...formData, quantity: numValue });
+      return;
+    }
+    
+    // Valid quantity
+    setQuantityError('');
+    setFormData({ ...formData, quantity: numValue });
+  };
+
   const uploadFiles = async (files, type) => {
     if (!files || files.length === 0) return [];
 
@@ -237,6 +275,19 @@ function OrderPageContent() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validasi quantity sebelum submit
+    if (!formData.quantity || formData.quantity === '' || formData.quantity <= 0) {
+      setQuantityError('Jumlah pesanan minimal 1 buket');
+      showToast.error('Harap isi jumlah pesanan dengan benar');
+      return;
+    }
+
+    if (formData.quantity > 100) {
+      setQuantityError('Jumlah pesanan terlalu banyak. Silakan hubungi admin untuk pemesanan di atas 100 buket');
+      showToast.error('Jumlah pesanan tidak valid');
+      return;
+    }
 
     // Validasi WhatsApp number tersedia
     const waData = settings?.whatsapp_number;
@@ -317,8 +368,9 @@ function OrderPageContent() {
         id: saved.id,
         order_number: saved.order_number,
         customer_name: saved.customer_name,
+        quantity: saved.quantity || formData.quantity,
         bouquet_name: saved.bouquet?.name || saved.bouquet_name,
-        bouquet_price: saved.bouquet?.price || saved.bouquet_price,
+        bouquet_price: saved.bouquet_price, // Total price (sudah dikalikan quantity dari backend)
         pickup_date: saved.pickup_date,
         pickup_time: saved.pickup_time,
         card_message: saved.card_message,
@@ -350,13 +402,15 @@ function OrderPageContent() {
   const payment = useMemo(() => {
     if (!selectedBouquet) return { dp: 0, remaining: 0, total: 0 };
     const base = parseFloat(selectedBouquet.price) || 0;
+    const quantity = parseInt(formData.quantity) || 0;
+    const subtotal = base * quantity;
     // surcharge +Rp 1.000 for ShopeePay channel
     const surcharge = (formData.payment_method === 'SHOPEEPAY' || formData.payment_method?.toLowerCase() === 'shopeepay') ? 1000 : 0;
-    const total = base + surcharge;
+    const total = subtotal + surcharge;
     const dp = formData.payment_type === "DP" ? total * 0.3 : total;
     const remaining = formData.payment_type === "DP" ? total - dp : 0;
     return { dp, remaining, total };
-  }, [selectedBouquet, formData.payment_type, formData.payment_method]);
+  }, [selectedBouquet, formData.payment_type, formData.payment_method, formData.quantity]);
 
   return (
     <>
@@ -464,6 +518,29 @@ function OrderPageContent() {
                     className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target"
                     placeholder="Masukkan nama lengkap Anda"
                   />
+                </div>
+
+                {/* Jumlah Pesanan */}
+                <div className="mb-3 md:mb-4">
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                    Jumlah Pesanan *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.quantity}
+                    onChange={handleQuantityChange}
+                    className={`w-full px-3 py-2.5 md:py-2 border rounded-md focus:ring-2 focus:ring-pink-300 transition-all text-sm sm:text-base touch-target ${
+                      quantityError 
+                        ? 'border-red-300 focus:border-red-400' 
+                        : 'border-pink-200 focus:border-pink-400'
+                    }`}
+                    placeholder="Masukkan jumlah buket"
+                  />
+                  {quantityError ? (
+                    <p className="text-xs text-red-600 mt-1 font-medium">{quantityError}</p>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">Minimal 1 buket</p>
+                  )}
                 </div>
 
                 <div className="mb-3 md:mb-4">

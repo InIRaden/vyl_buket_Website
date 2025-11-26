@@ -4,7 +4,8 @@ import Link from 'next/link';
 import NavBar from '../../../components/ui/NavBar';
 import Footer from '../../../components/ui/Footer';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
+import html2canvas from 'html2canvas';
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
@@ -17,6 +18,10 @@ function OrderSuccessContent() {
   const [usedFallback, setUsedFallback] = useState(false);
   const [settings, setSettings] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [autoScreenshotDone, setAutoScreenshotDone] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [showInstructionModal, setShowInstructionModal] = useState(false);
+  const orderDetailsRef = useRef(null);
 
   // Fetch settings untuk WhatsApp number
   useEffect(() => {
@@ -136,15 +141,16 @@ function OrderSuccessContent() {
   };
 
   // Calculate payment summary based on order data
-  const total = order?.bouquet_price || order?.bouquet?.price || 0;
+  // bouquet_price sudah termasuk quantity * harga per buket
+  const total = order?.bouquet_price || 0;
   
   // Hitung jumlah yang dibayar berdasarkan payment_type
   let paid = 0;
   if (order?.payment_type === 'DP') {
-    // Jika DP, yang dibayar adalah dp_amount (30%)
+    // Jika DP, yang dibayar adalah dp_amount (30% dari total)
     paid = order?.dp_amount || (total * 0.3);
   } else if (order?.payment_type === 'FULL') {
-    // Jika lunas, yang dibayar adalah total
+    // Jika lunas, yang dibayar adalah total (sudah termasuk quantity)
     paid = total;
   }
   
@@ -185,11 +191,184 @@ function OrderSuccessContent() {
   // Get brand/store name from settings
   const storeName = settings?.store_name?.value || settings?.store_name || 'vyl.bouquet';
 
+  // Show instruction modal on page load
+  useEffect(() => {
+    if (!loading && !error && order) {
+      // Show modal after a short delay
+      const timer = setTimeout(() => {
+        setShowInstructionModal(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, error, order]);
+
+  // Auto-screenshot functionality
+  useEffect(() => {
+    if (!loading && !error && order && orderDetailsRef.current && !autoScreenshotDone) {
+      // Wait a bit for all images/content to render
+      const timer = setTimeout(async () => {
+        try {
+          await handleDownloadProof(true); // true = auto mode
+          setAutoScreenshotDone(true);
+        } catch (err) {
+          console.warn('Auto-screenshot failed, user can manually download:', err);
+          setAutoScreenshotDone(true); // Mark as done even if failed
+        }
+      }, 1500); // 1.5 second delay for content to fully render
+
+      return () => clearTimeout(timer);
+    }
+  }, [loading, error, order, autoScreenshotDone]);
+
+  // Download proof handler
+  const handleDownloadProof = async (isAuto = false) => {
+    if (!orderDetailsRef.current) return;
+    
+    setIsDownloading(true);
+    
+    try {
+      const canvas = await html2canvas(orderDetailsRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2, // Higher quality
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+
+      // Convert to blob
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          throw new Error('Failed to create image blob');
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const fileName = `Bukti-Pesanan-${order?.order_number || order?.id || 'Order'}.png`;
+        
+        link.href = url;
+        link.download = fileName;
+        
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Cleanup
+        URL.revokeObjectURL(url);
+        
+        if (!isAuto) {
+          // Show success message for manual download
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }
+      }, 'image/png');
+      
+    } catch (err) {
+      console.error('Screenshot failed:', err);
+      
+      if (!isAuto) {
+        alert('Gagal mengunduh bukti pesanan. Silakan screenshot manual atau hubungi admin.');
+      }
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen pb-12 my-12 font-serif">
       <div className="relative z-20">
         <NavBar />
       </div>
+
+      {/* Instruction Modal */}
+      {showInstructionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full transform animate-slideUp">
+            {/* Header with logo */}
+            <div className="border-b border-gray-200 p-4 text-center">
+              <div className="flex justify-center mb-2">
+                <img 
+                  src="/logo-removebg-preview.png" 
+                  alt="vylbouquet" 
+                  className="h-12 w-auto"
+                />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Pesanan Berhasil Dibuat</h2>
+              <p className="text-gray-600 text-xs">Selesaikan 4 langkah berikut untuk memastikan pesanan Anda diproses</p>
+            </div>
+
+            {/* Content */}
+            <div className="p-4">
+              <div className="space-y-2.5 mb-4">
+                {/* Step 1 */}
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-all">
+                  <div className="flex-shrink-0 w-7 h-7 bg-pink-500 text-white rounded-full flex items-center justify-center font-bold text-xs">
+                    1
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900 text-sm mb-0.5">Salin Format Pesanan</p>
+                    <p className="text-xs text-gray-600">Scroll ke bawah dan klik tombol "Salin Pesan"</p>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-all">
+                  <div className="flex-shrink-0 w-7 h-7 bg-pink-500 text-white rounded-full flex items-center justify-center font-bold text-xs">
+                    2
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900 text-sm mb-0.5">Hubungi Admin via WhatsApp</p>
+                    <p className="text-xs text-gray-600">Klik tombol hijau "Hubungi via WhatsApp"</p>
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-all">
+                  <div className="flex-shrink-0 w-7 h-7 bg-pink-500 text-white rounded-full flex items-center justify-center font-bold text-xs">
+                    3
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900 text-sm mb-0.5">Kirim Format ke Admin</p>
+                    <p className="text-xs text-gray-600">Paste dan kirim format pesanan ke chat WhatsApp</p>
+                  </div>
+                </div>
+
+                {/* Step 4 */}
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-all">
+                  <div className="flex-shrink-0 w-7 h-7 bg-pink-500 text-white rounded-full flex items-center justify-center font-bold text-xs">
+                    4
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900 text-sm mb-0.5">Simpan Bukti Pesanan</p>
+                    <p className="text-xs text-gray-600">Klik "Unduh Bukti Pesanan" untuk menyimpan</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Important Note */}
+              <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-4">
+                <div className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>
+                    <p className="font-bold text-red-900 text-xs mb-0.5">PENTING</p>
+                    <p className="text-xs text-red-800">Pesanan hanya akan diproses setelah Anda mengirim format pesanan via WhatsApp kepada admin kami.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <button
+                onClick={() => setShowInstructionModal(false)}
+                className="w-full bg-pink-500 hover:bg-pink-600 text-white font-semibold py-3 rounded-lg transition-colors text-sm"
+              >
+                Saya Mengerti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-3xl mx-auto px-6 pt-20">
         <div className="text-center mb-6">
@@ -200,6 +379,21 @@ function OrderSuccessContent() {
           </div>
           <h1 className="text-3xl font-serif font-bold mb-2">Pesanan Berhasil!</h1>
           <p className="text-amber-700 mb-6">Pesanan Anda telah kami terima dan sedang diproses</p>
+          
+          {/* Important Notice */}
+          <div className="max-w-md mx-auto bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-yellow-800 mb-1">Penting!</p>
+                <p className="text-xs text-yellow-700">
+                  Simpan bukti pesanan ini sebagai barang bukti. Screenshot akan otomatis terunduh, atau klik tombol "Unduh Bukti Pesanan" di bawah.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {loading ? (
@@ -208,7 +402,15 @@ function OrderSuccessContent() {
           <div className="text-center text-red-500">{error}</div>
         ) : (
           <>
-            <section className="bg-white rounded-xl shadow p-6 border border-pink-50 mb-6">
+            {/* Wrap order details in ref for screenshot */}
+            <div ref={orderDetailsRef}>
+              {/* Store branding for screenshot */}
+              <div className="text-center mb-4">
+                <h2 className="text-xl font-bold text-pink-500">{storeName}</h2>
+                <p className="text-xs text-gray-500">Bukti Pesanan</p>
+              </div>
+
+              <section className="bg-white rounded-xl shadow p-6 border border-pink-50 mb-6">
               <h2 className="font-semibold mb-4">Detail Pesanan</h2>
 
               <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
@@ -229,6 +431,11 @@ function OrderSuccessContent() {
                 <div className="col-span-2 mt-3">
                   <div className="text-xs text-gray-500">Buket yang Dipesan</div>
                   <div className="font-semibold">{order?.bouquet?.name || order?.bouquet_name || '-'}</div>
+                </div>
+
+                <div className="col-span-2 mt-3">
+                  <div className="text-xs text-gray-500">Jumlah Pesanan</div>
+                  <div className="font-medium">{order?.quantity || 1} buket</div>
                 </div>
 
                 <div className="mt-3">
@@ -346,6 +553,44 @@ function OrderSuccessContent() {
                 </li>
               </ol>
             </section>
+            </div>
+            {/* End of screenshot area */}
+
+            {/* Download Button - Always visible */}
+            <div className="mb-6">
+              <button
+                onClick={() => handleDownloadProof(false)}
+                disabled={isDownloading}
+                className="w-full inline-flex items-center justify-center gap-2 bg-pink-500 hover:bg-pink-600 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition-colors shadow-md"
+              >
+                {isDownloading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Mengunduh...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Unduh Bukti Pesanan
+                  </>
+                )}
+              </button>
+              <div className="mt-3 space-y-1">
+                <p className="text-sm text-red-600 font-medium flex items-start gap-1">
+                  <span className="flex-shrink-0">*</span>
+                  <span>Simpan sebagai barang bukti pesanan Anda</span>
+                </p>
+                <p className="text-sm text-red-600 font-medium flex items-start gap-1">
+                  <span className="flex-shrink-0">*</span>
+                  <span>Jika gagal mengunduh, silakan screenshot manual halaman ini (tekan tombol Print Screen atau Screenshot pada perangkat Anda)</span>
+                </p>
+              </div>
+            </div>
 
             <div className="flex gap-4">
               {whatsappUrl ? (

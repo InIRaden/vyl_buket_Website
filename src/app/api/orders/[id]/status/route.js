@@ -70,9 +70,12 @@ export const PUT = authMiddleware(async function PUT(request, { params }) {
         ? updates.order_status
         : updates.payment_status;
 
+      // Get admin_id from request context (set by authMiddleware)
+      const adminId = request.user?.id || null;
+
       await OrderLog.create({
         order_id: order.id,
-        admin_id: 1, // TODO: Get from JWT
+        admin_id: adminId,
         previous_status: previousStatus,
         new_status: newStatus,
         notes: body.notes || `Status changed via admin panel`,

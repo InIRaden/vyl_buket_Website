@@ -133,6 +133,7 @@ export async function POST(request) {
     // Validasi input required
     const requiredFields = [
       "customer_name",
+      "quantity",
       "bouquet_id",
       "pickup_date",
       "pickup_time",
@@ -256,7 +257,8 @@ export async function POST(request) {
     const orderNumber = `ORD-${dateStr}-${String(count + 1).padStart(4, "0")}`;
 
     // Hitung payment
-    const bouquetPrice = parseFloat(bouquet.price);
+    const quantity = parseInt(body.quantity) || 1;
+    const bouquetPrice = parseFloat(bouquet.price) * quantity;
     let dpAmount = 0;
     let remainingAmount = 0;
     let totalPaid = 0;
@@ -266,11 +268,11 @@ export async function POST(request) {
       // DP 30%
       dpAmount = bouquetPrice * 0.3;
       remainingAmount = bouquetPrice - dpAmount;
-      totalPaid = 0; // Belum bayar, menunggu konfirmasi
+      totalPaid = dpAmount; // Set total_paid sesuai DP amount
     } else if (body.payment_type === "FULL") {
       dpAmount = 0;
       remainingAmount = 0;
-      totalPaid = 0; // Belum bayar, menunggu konfirmasi
+      totalPaid = bouquetPrice; // Set total_paid sesuai full amount
     }
 
     // Create order
@@ -279,6 +281,7 @@ export async function POST(request) {
         order_number: orderNumber,
         bouquet_id: body.bouquet_id,
         customer_name: body.customer_name,
+        quantity: quantity,
         sender_name: body.sender_name,
         sender_account_number: body.sender_account_number || null,
         sender_phone: body.sender_phone || null,

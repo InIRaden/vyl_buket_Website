@@ -204,6 +204,7 @@ export default function OrdersPage() {
           order.customer_name || '',
           order.sender_phone || '',
           order.bouquet?.name || 'Custom',
+          `${order.quantity || 1}`,
           formatPrice(total),
           order.payment_type === 'DP' ? 'DP' : 'Lunas',
           order.payment_type === 'DP' ? formatPrice(dp) : '-',
@@ -221,23 +222,24 @@ export default function OrdersPage() {
       autoTable(doc, {
         startY: yPos,
         head: [[
-          'No. Order', 'Pembeli', 'WA', 'Buket', 'Harga', 'Tipe', 'DP', 'Sisa', 'Status', 'Pengambilan'
+          'No. Order', 'Pembeli', 'WA', 'Buket', 'Jumlah', 'Harga', 'Tipe', 'DP', 'Sisa', 'Status', 'Pengambilan'
         ]],
         body: tableData,
         theme: 'striped',
         styles: { fontSize: 7, cellPadding: 1.5 },
         headStyles: { fillColor: [236, 72, 153], textColor: 255, fontStyle: 'bold' },
         columnStyles: {
-          0: { cellWidth: 25 },
-          1: { cellWidth: 22 },
-          2: { cellWidth: 20 },
-          3: { cellWidth: 20 },
-          4: { cellWidth: 18 },
-          5: { cellWidth: 12 },
-          6: { cellWidth: 18 },
-          7: { cellWidth: 18 },
-          8: { cellWidth: 20 },
-          9: { cellWidth: 25 }
+          0: { cellWidth: 22 },
+          1: { cellWidth: 20 },
+          2: { cellWidth: 18 },
+          3: { cellWidth: 18 },
+          4: { cellWidth: 12 },
+          5: { cellWidth: 16 },
+          6: { cellWidth: 10 },
+          7: { cellWidth: 16 },
+          8: { cellWidth: 16 },
+          9: { cellWidth: 18 },
+          10: { cellWidth: 22 }
         },
       });
 
@@ -509,6 +511,9 @@ export default function OrdersPage() {
                         <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap min-w-[120px]">
                           Buket
                         </th>
+                        <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap min-w-[80px]">
+                          Jumlah
+                        </th>
                         <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap min-w-[110px]">
                           Harga Total
                         </th>
@@ -553,6 +558,9 @@ export default function OrdersPage() {
                             </td>
                             <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
                               <div className="text-sm text-gray-700">{order.bouquet?.name || 'Custom'}</div>
+                            </td>
+                            <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
+                              <div className="text-sm font-semibold text-gray-900">{order.quantity || 1}</div>
                             </td>
                             <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
                               <div className="text-sm font-semibold text-gray-900">{formatPrice(totalPrice)}</div>
