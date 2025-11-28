@@ -14,6 +14,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const isActive = searchParams.get("is_active");
     const q = searchParams.get("q");
+    const sort = searchParams.get("sort") || "newest"; // newest, oldest, price_asc, price_desc
     const page = parseInt(searchParams.get("page")) || 1;
     const limit = parseInt(searchParams.get("limit")) || 9;
     const offset = (page - 1) * limit;
@@ -34,13 +35,31 @@ export async function GET(request) {
       ];
     }
 
-    // Get total count
+    // Determine sort order
+    let order;
+    switch (sort) {
+      case "oldest":
+        order = [["created_at", "ASC"]];
+        break;
+      case "price_asc":
+        order = [["price", "ASC"]];
+        break;
+      case "price_desc":
+        order = [["price", "DESC"]];
+        break;
+      case "newest":
+      default:
+        order = [["created_at", "DESC"]];
+        break;
+    }
+
+    // Get total count for pagination
     const total = await Bouquet.count({ where });
 
-    // Get paginated data
+    // Get paginated bouquets with sorting
     const bouquets = await Bouquet.findAll({
       where,
-      order: [["created_at", "DESC"]],
+      order,
       limit,
       offset,
     });
@@ -50,10 +69,13 @@ export async function GET(request) {
     return NextResponse.json({
       success: true,
       data: bouquets,
-      total,
-      page,
-      totalPages,
-      limit,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasMore: page < totalPages,
+      },
     });
   } catch (error) {
     console.error("Get bouquets error:", error);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
@@ -24,20 +24,24 @@ export default function BouquetsPage() {
   const [modalMode, setModalMode] = useState('create');
   const [selectedBouquet, setSelectedBouquet] = useState(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filterValue, setFilterValue] = useState("all"); // Combined filter: all, active, inactive, newest, oldest, price_asc, price_desc
+  
+  // Pagination state (backend pagination)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(9);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
-  // Pagination
-  const {
-    paginatedData: paginatedBouquets,
-    currentPage,
-    totalPages,
-    totalItems,
-    startIndex,
-    endIndex,
-    perPage,
-    goToPage,
-    changePerPage,
-  } = usePagination(bouquets, 9); // 9 items per page (3x3 grid)
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1); // Reset to page 1 on search
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // JWT Protection
   useEffect(() => {
@@ -64,14 +68,33 @@ export default function BouquetsPage() {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (search.trim() !== "") params.set("q", search.trim());
-      if (statusFilter !== "all") params.set("is_active", statusFilter);
+      if (debouncedSearch.trim() !== "") params.set("q", debouncedSearch.trim());
+      
+      // Handle combined filter
+      if (filterValue === "active") {
+        params.set("is_active", "true");
+      } else if (filterValue === "inactive") {
+        params.set("is_active", "false");
+      } else if (["newest", "oldest", "price_asc", "price_desc"].includes(filterValue)) {
+        params.set("sort", filterValue);
+      } else {
+        // "all" - no status filter, default sort
+        params.set("sort", "newest");
+      }
+      
+      params.set("page", currentPage.toString());
+      params.set("limit", perPage.toString());
+      
       const query = params.toString();
       const response = await fetch(`/api/bouquets${query ? `?${query}` : ''}`);
       const data = await response.json();
 
       if (data.success) {
         setBouquets(data.data);
+        if (data.pagination) {
+          setTotalItems(data.pagination.total);
+          setTotalPages(data.pagination.totalPages);
+        }
       }
     } catch (error) {
       console.error('Fetch bouquets error:', error);
@@ -84,7 +107,7 @@ export default function BouquetsPage() {
   useEffect(() => {
     fetchStats();
     fetchBouquets();
-  }, [search, statusFilter]);
+  }, [debouncedSearch, filterValue, currentPage, perPage]);
 
   // Handle tambah buket
   const handleAdd = () => {
@@ -134,6 +157,19 @@ export default function BouquetsPage() {
       minimumFractionDigits: 0,
     }).format(price);
   };
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handlePerPageChange = (newPerPage) => {
+    setPerPage(newPerPage);
+    setCurrentPage(1); // Reset to page 1
+  };
+
+  const startIndex = (currentPage - 1) * perPage + 1;
+  const endIndex = Math.min(currentPage * perPage, totalItems);
 
   return (
     <div>
@@ -203,18 +239,29 @@ export default function BouquetsPage() {
         <div className="flex flex-col sm:flex-row gap-3">
           <SearchBar
             value={search}
-            onChange={setSearch}
+            onChange={(value) => {
+              setSearch(value);
+              // Debounce akan handle reset page otomatis
+            }}
             placeholder="Cari nama atau deskripsi buket..."
           />
           <FilterSelect
-            label="Status"
-            value={statusFilter}
-            onChange={setStatusFilter}
+            label="Filter"
+            value={filterValue}
+            onChange={(value) => {
+              setFilterValue(value);
+              setCurrentPage(1); // Reset to page 1 on filter
+            }}
             options={[
-              { label: "Aktif", value: "true" },
-              { label: "Tidak Aktif", value: "false" },
+              { label: "Semua Status", value: "all" },
+              { label: "Aktif", value: "active" },
+              { label: "Tidak Aktif", value: "inactive" },
+              { label: "Terbaru", value: "newest" },
+              { label: "Terlama", value: "oldest" },
+              { label: "Termurah", value: "price_asc" },
+              { label: "Termahal", value: "price_desc" },
             ]}
-            placeholder="Semua Status"
+            placeholder="Filter"
           />
         </div>
       </div>
@@ -249,7 +296,7 @@ export default function BouquetsPage() {
       {!loading && bouquets.length > 0 && (
         <>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {paginatedBouquets.map((bouquet) => (
+          {bouquets.map((bouquet) => (
             <div
               key={bouquet.id}
               className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden"
@@ -316,12 +363,12 @@ export default function BouquetsPage() {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            onPageChange={goToPage}
+            onPageChange={handlePageChange}
             totalItems={totalItems}
             startIndex={startIndex}
             endIndex={endIndex}
             perPage={perPage}
-            onPerPageChange={changePerPage}
+            onPerPageChange={handlePerPageChange}
           />
         </div>
         </>

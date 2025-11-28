@@ -1,28 +1,58 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import NavBar from '../../../components/ui/NavBar';
 import Footer from '../../../components/ui/Footer';
 import Pagination from '../../../components/ui/Pagination';
-import { usePagination } from '../../../hooks/usePagination';
 
 export default function CatalogPage() {
   const [bouquets, setBouquets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Inisialisasi false agar tidak flash loading saat pertama render (opsional, tapi lebih smooth)
+  const [loading, setLoading] = useState(true); 
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(9);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+      setCurrentPage(1); 
+    }, 500); 
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Fetch bouquets
   useEffect(() => {
     fetchBouquets();
-  }, []);
+  }, [debouncedQuery, currentPage, perPage]);
 
   const fetchBouquets = async () => {
     try {
-      const response = await fetch('/api/bouquets');
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.set("is_active", "true");
+      params.set("page", currentPage.toString());
+      params.set("limit", perPage.toString());
+      if (debouncedQuery.trim() !== "") params.set("q", debouncedQuery.trim());
+      
+      const response = await fetch(`/api/bouquets?${params.toString()}`);
       const data = await response.json();
+      
       if (data.success) {
-        setBouquets(data.data.filter(b => b.is_active));
+        setBouquets(data.data);
+        if (data.pagination) {
+          setTotalItems(data.pagination.total);
+          setTotalPages(data.pagination.totalPages);
+        }
       }
     } catch (error) {
       console.error('Error fetching bouquets:', error);
@@ -39,38 +69,26 @@ export default function CatalogPage() {
     }).format(price);
   };
 
-  const filtered = useMemo(() => {
-    if (!query) return bouquets;
-    const q = query.toLowerCase();
-    return bouquets.filter(b => (b.name || '').toLowerCase().includes(q) || (b.description || '').toLowerCase().includes(q));
-  }, [bouquets, query]);
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-  // Pagination untuk catalog
-  const {
-    paginatedData: paginatedBouquets,
-    currentPage,
-    totalPages,
-    totalItems,
-    startIndex,
-    endIndex,
-    perPage,
-    goToPage,
-    changePerPage,
-  } = usePagination(filtered, 12); // 12 items (6 rows x 2 cols mobile)
+  const handlePerPageChange = (newPerPage) => {
+    setPerPage(newPerPage);
+    setCurrentPage(1);
+  };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen py-12 px-4">
-        <div className="max-w-6xl mx-auto text-center">
-          <p className="text-gray-600">Memuat katalog...</p>
-        </div>
-      </div>
-    );
-  }
+  const startIndex = (currentPage - 1) * perPage + 1;
+  const endIndex = Math.min(currentPage * perPage, totalItems);
+
+  // --- BAGIAN YANG DIHAPUS: if (loading) return (...) ---
+  // Kita tidak lagi meng-return full page loading di sini.
+  // Struktur halaman (Navbar, Search) akan tetap ada.
 
   return (
     <>
-      {/* Navbar */}
+      {/* Navbar Tetap Render */}
       <div className="relative z-20">
         <NavBar />
       </div>
@@ -89,7 +107,7 @@ export default function CatalogPage() {
             </p>
           </div>
 
-          {/* Search Bar - Responsive width */}
+          {/* Search Bar - Tetap di tempat, tidak akan hilang saat loading */}
           <div className="max-w-2xl mx-auto mb-8 md:mb-12 px-2">
             <div className="relative">
               <span className="absolute inset-y-0 left-3 sm:left-4 flex items-center text-gray-400 pointer-events-none">
@@ -107,8 +125,15 @@ export default function CatalogPage() {
             </div>
           </div>
 
-          {/* Catalog Grid */}
-          {filtered.length === 0 ? (
+          {/* Catalog Grid Area - Loading ditangani di sini */}
+          {loading ? (
+             // TAMPILAN SAAT LOADING (Hanya mengganti area grid)
+             <div className="min-h-[400px] flex flex-col items-center justify-center text-gray-500">
+                <div className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin mb-4"></div>
+                <p>Mencari bunga cantik...</p>
+             </div>
+          ) : bouquets.length === 0 ? (
+            // TAMPILAN JIKA KOSONG
             <div className="text-center text-gray-600 py-12">
               <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
@@ -116,15 +141,14 @@ export default function CatalogPage() {
               <p className="text-lg">Belum ada buket tersedia</p>
             </div>
           ) : (
+            // TAMPILAN DATA (GRID)
             <>
-            {/* Grid: 2 kolom di mobile, 2 di tablet, 3 di desktop */}
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
-              {paginatedBouquets.map((bouquet) => (
+              {bouquets.map((bouquet) => (
                 <div 
                   key={bouquet.id} 
                   className="bg-white rounded-lg sm:rounded-xl shadow-md hover:shadow-xl transition-shadow flex flex-col group"
                 >
-                  {/* Image - Responsive height */}
                   <div className="relative h-40 sm:h-48 md:h-56 lg:h-64 bg-gray-100 overflow-hidden rounded-t-lg sm:rounded-t-xl">
                     {bouquet.image_url ? (
                       <Image
@@ -143,37 +167,26 @@ export default function CatalogPage() {
                     )}
                   </div>
 
-                  {/* Card Content - Responsive padding */}
                   <div className="p-3 sm:p-4 md:p-5 lg:p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      {/* Title - Responsive text size */}
                       <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-serif font-bold mb-1 sm:mb-2 line-clamp-2 text-gray-900">
                         {bouquet.name}
                       </h3>
-                      
-                      {/* Description - Hidden di mobile kecil */}
                       <p className="hidden sm:block text-xs md:text-sm text-gray-600 mb-3 line-clamp-2">
                         {bouquet.description || 'Mixed seasonal flowers in warm tones'}
                       </p>
                     </div>
 
-                    {/* Price & Button */}
                     <div className="mt-2 sm:mt-3">
-                      {/* Price - Responsive size */}
                       <div className="mb-2 sm:mb-3">
                         <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-pink-400 block">
                           {formatPrice(bouquet.price)}
                         </span>
                       </div>
-
-                      {/* Order Button - Touch friendly */}
                       <Link
                         href={`/order?bouquet_id=${bouquet.id}`}
                         className="w-full inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-pink-400 hover:bg-pink-500 active:bg-pink-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 md:py-3 rounded-lg font-semibold transition-all hover:shadow-md text-xs sm:text-sm md:text-base touch-target"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 7M7 13l-2 5h13" />
-                        </svg>
                         <span className="hidden sm:inline">Pilih buket ini</span>
                         <span className="sm:hidden">Pilih</span>
                       </Link>
@@ -183,31 +196,29 @@ export default function CatalogPage() {
               ))}
             </div>
 
-            {/* Pagination */}
+            {/* Pagination hanya muncul jika tidak loading & ada data */}
             <div className="mt-8 md:mt-12">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={goToPage}
+                onPageChange={handlePageChange}
                 totalItems={totalItems}
                 startIndex={startIndex}
                 endIndex={endIndex}
                 perPage={perPage}
-                onPerPageChange={changePerPage}
+                onPerPageChange={handlePerPageChange}
               />
             </div>
 
-            {/* Result count - Helper text */}
             <div className="text-center mt-6 text-sm text-gray-500">
               Menampilkan {startIndex}-{endIndex} dari {totalItems} buket
-              {query && ` untuk "${query}"`}
+              {debouncedQuery && ` untuk "${debouncedQuery}"`}
             </div>
             </>
           )}
         </div>
       </div>
       
-      {/* Footer */}
       <Footer />
     </>
   );

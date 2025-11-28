@@ -37,8 +37,10 @@ export async function GET(request) {
     const pickupTimeFrom = searchParams.get("pickup_time_from");
     const pickupTimeTo = searchParams.get("pickup_time_to");
     const searchQuery = searchParams.get("q");
-    const limit = parseInt(searchParams.get("limit")) || 50;
-    const offset = parseInt(searchParams.get("offset")) || 0;
+    const sort = searchParams.get("sort") || "newest"; // newest, oldest, pickup_nearest, price_asc, price_desc
+    const page = parseInt(searchParams.get("page")) || 1;
+    const limit = parseInt(searchParams.get("limit")) || 10;
+    const offset = (page - 1) * limit;
 
     // Build where clause
     const whereClause = {};
@@ -80,6 +82,33 @@ export async function GET(request) {
       ];
     }
 
+    // Determine sort order
+    let orderClause;
+    switch (sort) {
+      case "oldest":
+        orderClause = [["created_at", "ASC"]];
+        break;
+      case "pickup_nearest":
+        orderClause = [
+          ["pickup_date", "ASC"],
+          ["pickup_time", "ASC"],
+        ];
+        break;
+      case "price_asc":
+        orderClause = [["bouquet_price", "ASC"]];
+        break;
+      case "price_desc":
+        orderClause = [["bouquet_price", "DESC"]];
+        break;
+      case "newest":
+      default:
+        orderClause = [["created_at", "DESC"]];
+        break;
+    }
+
+    // Count total for pagination
+    const total = await Order.count({ where: whereClause });
+
     // Fetch orders dengan relasi
     const orders = await Order.findAll({
       where: whereClause,
@@ -96,22 +125,22 @@ export async function GET(request) {
           order: [["display_order", "ASC"]],
         },
       ],
-      order: [["created_at", "ASC"]],
+      order: orderClause,
       limit,
       offset,
     });
 
-    // Count total
-    const total = await Order.count({ where: whereClause });
+    const totalPages = Math.ceil(total / limit);
 
     return NextResponse.json({
       success: true,
       data: orders,
       pagination: {
         total,
+        page,
         limit,
-        offset,
-        hasMore: offset + limit < total,
+        totalPages,
+        hasMore: page < totalPages,
       },
     });
   } catch (error) {
@@ -258,10 +287,7 @@ export async function POST(request) {
 
     // Hitung payment
     const quantity = parseInt(body.quantity) || 1;
-    const subtotal = parseFloat(bouquet.price) * quantity;
-    // Biaya admin +Rp 1.000 untuk ShopeePay
-    const surcharge = (body.payment_method === 'shopeepay' || body.payment_method?.toLowerCase() === 'shopeepay') ? 1000 : 0;
-    const bouquetPrice = subtotal + surcharge;
+    const bouquetPrice = parseFloat(bouquet.price) * quantity;
     let dpAmount = 0;
     let remainingAmount = 0;
     let totalPaid = 0;

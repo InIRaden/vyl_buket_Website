@@ -141,14 +141,8 @@ function OrderSuccessContent() {
   };
 
   // Calculate payment summary based on order data
-  // bouquet_price sudah termasuk quantity * harga per buket + biaya admin (jika ada)
+  // bouquet_price sudah termasuk quantity * harga per buket
   const total = order?.bouquet_price || 0;
-  
-  // Hitung subtotal dan surcharge untuk breakdown
-  const pricePerBouquet = order?.bouquet?.price || 0;
-  const quantity = order?.quantity || 1;
-  const subtotal = pricePerBouquet * quantity;
-  const surcharge = total - subtotal; // Biaya admin (jika ada)
   
   // Hitung jumlah yang dibayar berdasarkan payment_type
   let paid = 0;
@@ -156,7 +150,7 @@ function OrderSuccessContent() {
     // Jika DP, yang dibayar adalah dp_amount (30% dari total)
     paid = order?.dp_amount || (total * 0.3);
   } else if (order?.payment_type === 'FULL') {
-    // Jika lunas, yang dibayar adalah total (sudah termasuk quantity + biaya admin)
+    // Jika lunas, yang dibayar adalah total (sudah termasuk quantity)
     paid = total;
   }
   
@@ -461,18 +455,8 @@ function OrderSuccessContent() {
 
               <div className="mt-4 bg-pink-50 border-t border-pink-100 rounded-b-md p-4">
                 <div className="flex justify-between text-sm text-gray-700 mb-1">
-                  <span>Harga Buket:</span>
-                  <span className="font-semibold">{formatPrice(subtotal)}</span>
-                </div>
-                {surcharge > 0 && (
-                  <div className="flex justify-between text-xs text-orange-600 mb-1">
-                    <span>Biaya Admin ShopeePay:</span>
-                    <span className="font-medium">+ {formatPrice(surcharge)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm text-gray-900 font-bold mb-2 pt-1 border-t border-pink-200">
-                  <span>Total:</span>
-                  <span>{formatPrice(total)}</span>
+                  <span>Total Harga:</span>
+                  <span className="font-semibold">{formatPrice(total)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-green-600 mb-1">
                   <span>Dibayar {order?.payment_type === 'DP' ? '(DP 30%)' : '(Lunas)'}:</span>
@@ -492,6 +476,11 @@ function OrderSuccessContent() {
                 {order?.payment_type === 'DP' && (
                   <div className="mt-2 text-xs text-yellow-700 bg-yellow-50 px-2 py-1 rounded">
                     ⓘ Sisa dibayar saat pengambilan
+                  </div>
+                )}
+                {(order?.payment_method === 'shopeepay' || order?.payment_method?.toLowerCase() === 'shopeepay') && (
+                  <div className="mt-2 text-xs text-orange-700 bg-orange-50 px-2 py-1 rounded border border-orange-200">
+                    <span className="font-bold">⚠️ Catatan:</span> Transfer bank ke ShopeePay dikenakan biaya admin Rp 1.000 oleh pihak bank
                   </div>
                 )}
               </div>

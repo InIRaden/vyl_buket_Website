@@ -26,9 +26,14 @@ export default function OrdersPage() {
   const [pickupDateTo, setPickupDateTo] = useState('');
   const [pickupTimeFrom, setPickupTimeFrom] = useState('');
   const [pickupTimeTo, setPickupTimeTo] = useState('');
-  const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState('newest'); // newest, oldest, pickup_nearest
+  const [sortBy, setSortBy] = useState('newest'); // newest, oldest, pickup_nearest, price_asc, price_desc
   const [showResetModal, setShowResetModal] = useState(false);
+  
+  // Backend pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   // JWT Protection
   useEffect(() => {
@@ -38,7 +43,7 @@ export default function OrdersPage() {
   }, [user, authLoading, router]);
 
   // fetch orders with optional filters
-  const fetchOrders = useCallback(async (opts = {}) => {
+  const fetchOrders = useCallback(async () => {
     try {
       if (initialLoading) {
         setLoading(true);
@@ -49,27 +54,34 @@ export default function OrdersPage() {
       if (pickupDateTo) params.append('pickup_date_to', pickupDateTo);
       if (pickupTimeFrom) params.append('pickup_time_from', pickupTimeFrom);
       if (pickupTimeTo) params.append('pickup_time_to', pickupTimeTo);
-      if (opts.page) params.append('page', String(opts.page));
+      params.append('sort', sortBy);
+      params.append('page', currentPage.toString());
+      params.append('limit', perPage.toString());
 
       const res = await fetch(`/api/orders?${params.toString()}`);
       const json = await res.json();
       setOrders(json.data || []);
+      
+      if (json.pagination) {
+        setTotalItems(json.pagination.total);
+        setTotalPages(json.pagination.totalPages);
+      }
     } catch (err) {
       console.error('fetchOrders', err);
     } finally {
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [searchQuery, pickupDateFrom, pickupDateTo, pickupTimeFrom, pickupTimeTo, initialLoading]);
+  }, [searchQuery, pickupDateFrom, pickupDateTo, pickupTimeFrom, pickupTimeTo, sortBy, currentPage, perPage, initialLoading]);
 
   // call when relevant filters change (debounce as needed)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      fetchOrders({ page });
+      fetchOrders();
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, pickupDateFrom, pickupDateTo, pickupTimeFrom, pickupTimeTo, page, fetchOrders]);
+  }, [searchQuery, pickupDateFrom, pickupDateTo, pickupTimeFrom, pickupTimeTo, sortBy, currentPage, perPage, fetchOrders]);
 
   const getStatusBadge = (status) => {
     const config = {
@@ -182,7 +194,9 @@ export default function OrdersPage() {
         // Sort info
         const sortLabel = sortBy === 'newest' ? 'Pesanan Terbaru' : 
                          sortBy === 'oldest' ? 'Pesanan Terlama' : 
-                         sortBy === 'pickup_nearest' ? 'Pengambilan Terdekat' : 'Waktu Pengambilan';
+                         sortBy === 'pickup_nearest' ? 'Pengambilan Terdekat' :
+                         sortBy === 'price_asc' ? 'Harga Termurah' :
+                         sortBy === 'price_desc' ? 'Harga Termahal' : 'Waktu Pengambilan';
         doc.text(`- Urutan: ${sortLabel}`, 14, yPos);
         yPos += 4;
         
@@ -190,8 +204,8 @@ export default function OrdersPage() {
         yPos += 2;
       }
 
-      // Gunakan filteredOrders (yang sudah terfilter dan tersort) bukan orders mentah
-      const tableData = (filteredOrders || []).map((order) => {
+      // Gunakan orders (yang sudah terfilter dan tersort dari backend) bukan orders mentah
+      const tableData = (orders || []).map((order) => {
         const total = parseFloat(order.bouquet_price || 0);
         const dp = parseFloat(order.dp_amount || 0);
         const remaining = parseFloat(order.remaining_amount || 0);
@@ -216,7 +230,7 @@ export default function OrdersPage() {
 
       // Tampilkan total records
       doc.setFontSize(9);
-      doc.text(`Total Pesanan: ${filteredOrders.length}`, 14, yPos);
+      doc.text(`Total Pesanan: ${orders.length} (halaman ini)`, 14, yPos);
       yPos += 4;
 
       autoTable(doc, {
@@ -253,60 +267,12 @@ export default function OrdersPage() {
 
       const fileName = `laporan-pesanan-${new Date().toISOString().slice(0,10)}.pdf`;
       doc.save(fileName);
-      showToast.success(`PDF berhasil diunduh: ${filteredOrders.length} pesanan`);
+      showToast.success(`PDF berhasil diunduh: ${orders.length} pesanan (halaman ini)`);
     } catch (err) {
       console.error('exportToPDF error', err);
       showToast.error('Gagal mengekspor PDF. Pastikan dependency "jspdf" dan "jspdf-autotable" terpasang.');
     }
   };
-
-  // Filter orders - hanya untuk search di client-side
-  // Tanggal dan waktu sudah difilter di backend/API
-  const filteredOrders = useMemo(() => {
-    let result = orders.filter(order => {
-      const matchSearch = !searchQuery || 
-        order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.order_number?.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      return matchSearch;
-    });
-
-    // Jika ada filter tanggal atau waktu pengambilan, otomatis sort berdasarkan waktu pengambilan
-    const hasPickupFilter = pickupDateFrom || pickupDateTo || pickupTimeFrom || pickupTimeTo;
-    const effectiveSortBy = hasPickupFilter ? 'pickup_time_asc' : sortBy;
-
-    // Sort berdasarkan pilihan
-    if (effectiveSortBy === 'newest') {
-      result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else if (effectiveSortBy === 'oldest') {
-      result.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    } else if (effectiveSortBy === 'pickup_nearest') {
-      const now = new Date();
-      result.sort((a, b) => {
-        const dateA = new Date(`${a.pickup_date} ${a.pickup_time || '00:00'}`);
-        const dateB = new Date(`${b.pickup_date} ${b.pickup_time || '00:00'}`);
-        
-        // Filter hanya yang belum lewat
-        const diffA = dateA - now;
-        const diffB = dateB - now;
-        
-        // Prioritaskan yang paling dekat dengan waktu sekarang (tapi belum lewat)
-        if (diffA < 0 && diffB < 0) return dateB - dateA; // Keduanya sudah lewat, yang terbaru dulu
-        if (diffA < 0) return 1; // A sudah lewat, B lebih prioritas
-        if (diffB < 0) return -1; // B sudah lewat, A lebih prioritas
-        return diffA - diffB; // Keduanya belum lewat, yang terdekat dulu
-      });
-    } else if (effectiveSortBy === 'pickup_time_asc') {
-      // Sort berdasarkan waktu pengambilan dari terkecil ke terbesar
-      result.sort((a, b) => {
-        const dateA = new Date(`${a.pickup_date} ${a.pickup_time || '00:00'}`);
-        const dateB = new Date(`${b.pickup_date} ${b.pickup_time || '00:00'}`);
-        return dateA - dateB;
-      });
-    }
-
-    return result;
-  }, [orders, searchQuery, sortBy, pickupDateFrom, pickupDateTo, pickupTimeFrom, pickupTimeTo]);
 
   // Handler untuk reset filter
   const handleResetFilter = () => {
@@ -315,22 +281,24 @@ export default function OrdersPage() {
     setPickupTimeFrom('');
     setPickupTimeTo('');
     setSearchQuery('');
+    setSortBy('newest');
+    setCurrentPage(1);
     setShowResetModal(false);
     showToast.success('Filter berhasil direset');
   };
 
-  // Pagination
-  const {
-    paginatedData: paginatedOrders,
-    currentPage,
-    totalPages,
-    totalItems,
-    startIndex,
-    endIndex,
-    perPage,
-    goToPage,
-    changePerPage,
-  } = usePagination(filteredOrders, 10); // 10 orders per page
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handlePerPageChange = (newPerPage) => {
+    setPerPage(newPerPage);
+    setCurrentPage(1); // Reset to page 1
+  };
+
+  const startIndex = (currentPage - 1) * perPage + 1;
+  const endIndex = Math.min(currentPage * perPage, totalItems);
 
   if (authLoading || loading) {
     return (
@@ -355,7 +323,7 @@ export default function OrdersPage() {
           </div>
           <button
             onClick={exportToPDF}
-            disabled={filteredOrders.length === 0}
+            disabled={orders.length === 0}
             className="w-full sm:w-auto px-3 sm:px-4 py-2 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-lg text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap touch-target"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -383,12 +351,17 @@ export default function OrdersPage() {
             <label className="block text-xs font-medium text-gray-700 mb-1">Urutkan</label>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setCurrentPage(1); // Reset to page 1 on sort change
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent bg-white cursor-pointer"
             >
               <option value="newest">Pesanan Terbaru</option>
               <option value="oldest">Pesanan Terlama</option>
               <option value="pickup_nearest">Pengambilan Terdekat</option>
+              <option value="price_asc">Harga Termurah</option>
+              <option value="price_desc">Harga Termahal</option>
             </select>
           </div>
         </div>
@@ -481,7 +454,7 @@ export default function OrdersPage() {
             <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-primary mx-auto"></div>
             <p className="text-gray-500 mt-4 text-xs sm:text-sm">Memuat pesanan...</p>
           </div>
-        ) : filteredOrders.length === 0 ? (
+        ) : orders.length === 0 ? (
           <div className="p-8 sm:p-12 text-center">
             <p className="text-gray-500 text-xs sm:text-sm">Tidak ada pesanan ditemukan</p>
           </div>
@@ -538,7 +511,7 @@ export default function OrdersPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {paginatedOrders.map((order) => {
+                      {orders.map((order) => {
                         const totalPrice = parseFloat(order.bouquet_price || 0);
                         const remaining = parseFloat(order.remaining_amount || 0);
                         
@@ -610,16 +583,16 @@ export default function OrdersPage() {
         )}
         
         {/* Pagination */}
-        {!initialLoading && filteredOrders.length > 0 && (
+        {!initialLoading && orders.length > 0 && (
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            onPageChange={goToPage}
+            onPageChange={handlePageChange}
             totalItems={totalItems}
             startIndex={startIndex}
             endIndex={endIndex}
             perPage={perPage}
-            onPerPageChange={changePerPage}
+            onPerPageChange={handlePerPageChange}
           />
         )}
       </div>

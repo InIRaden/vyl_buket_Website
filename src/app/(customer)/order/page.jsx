@@ -42,20 +42,20 @@ function OrderPageContent() {
   const [referenceFiles, setReferenceFiles] = useState([]);
   const [paymentFiles, setPaymentFiles] = useState([]);
   const [showBouquetDropdown, setShowBouquetDropdown] = useState(false);
-  const [minDate, setMinDate] = useState('');
-  const [minTime, setMinTime] = useState('08:00');
-  const [maxTime] = useState('18:00');
-  const [timeError, setTimeError] = useState('');
+  const [minDate, setMinDate] = useState("");
+  const [minTime, setMinTime] = useState("08:00");
+  const [maxTime] = useState("18:00");
+  const [timeError, setTimeError] = useState("");
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
-  const [quantityError, setQuantityError] = useState('');
+  const [quantityError, setQuantityError] = useState("");
 
   // Set minimum date (today)
   useEffect(() => {
     const today = new Date();
     const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
     setMinDate(`${year}-${month}-${day}`);
   }, []);
 
@@ -65,22 +65,32 @@ function OrderPageContent() {
       const now = new Date();
       const selectedDate = new Date(formData.pickup_date);
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const selected = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-      
+      const selected = new Date(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate()
+      );
+
       // If today is selected, set minimum time to current time + 1 hour
       if (selected.getTime() === today.getTime()) {
         const currentHour = now.getHours();
         const currentMinute = now.getMinutes();
-        
+
         // Check if it's before operational hours
         if (currentHour < 8) {
           // Can book from 8:00 onwards
           generateTimeSlots(8, 0, 18, 0);
-          setTimeError('');
+          setTimeError("");
         } else if (currentHour >= 17) {
           // Too late to book today (need at least 1 hour before closing)
-          setTimeError('Waktu operasional hari ini sudah habis (08:00-18:00). Silakan pilih tanggal besok.');
-          setFormData(prev => ({ ...prev, pickup_date: '', pickup_time: '' }));
+          setTimeError(
+            "Waktu operasional hari ini sudah habis (08:00-18:00). Silakan pilih tanggal besok."
+          );
+          setFormData((prev) => ({
+            ...prev,
+            pickup_date: "",
+            pickup_time: "",
+          }));
           setAvailableTimeSlots([]);
           return;
         } else {
@@ -88,20 +98,22 @@ function OrderPageContent() {
           const minHour = currentHour + 1;
           const minMinute = currentMinute;
           generateTimeSlots(minHour, minMinute, 18, 0);
-          setTimeError('');
+          setTimeError("");
         }
-        
+
         // Reset time if current selected time is not in available slots
         if (formData.pickup_time) {
-          const isValid = availableTimeSlots.some(slot => slot.value === formData.pickup_time);
+          const isValid = availableTimeSlots.some(
+            (slot) => slot.value === formData.pickup_time
+          );
           if (!isValid && availableTimeSlots.length > 0) {
-            setFormData(prev => ({ ...prev, pickup_time: '' }));
+            setFormData((prev) => ({ ...prev, pickup_time: "" }));
           }
         }
       } else {
         // For future dates, all operational hours available (08:00 - 18:00)
         generateTimeSlots(8, 0, 18, 0);
-        setTimeError('');
+        setTimeError("");
       }
     } else {
       setAvailableTimeSlots([]);
@@ -113,31 +125,36 @@ function OrderPageContent() {
     const slots = [];
     let currentHour = startHour;
     let currentMinute = Math.ceil(startMinute / 30) * 30; // Round up to nearest 30 min
-    
+
     if (currentMinute >= 60) {
       currentHour += 1;
       currentMinute = 0;
     }
-    
-    while (currentHour < endHour || (currentHour === endHour && currentMinute === 0)) {
-      const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+
+    while (
+      currentHour < endHour ||
+      (currentHour === endHour && currentMinute === 0)
+    ) {
+      const timeStr = `${String(currentHour).padStart(2, "0")}:${String(
+        currentMinute
+      ).padStart(2, "0")}`;
       slots.push({
         value: timeStr,
-        label: timeStr
+        label: timeStr,
       });
-      
+
       currentMinute += 30;
       if (currentMinute >= 60) {
         currentHour += 1;
         currentMinute = 0;
       }
-      
+
       // Stop if we've passed the end hour
       if (currentHour > endHour) break;
     }
-    
+
     setAvailableTimeSlots(slots);
-    setMinTime(slots.length > 0 ? slots[0].value : '08:00');
+    setMinTime(slots.length > 0 ? slots[0].value : "08:00");
   };
 
   useEffect(() => {
@@ -153,10 +170,15 @@ function OrderPageContent() {
 
         if (bouqJson && bouqJson.success)
           setBouquets(bouqJson.data.filter((b) => b.is_active));
-        
+
         if (setJson && setJson.success) {
           const waData = setJson.data?.whatsapp_number;
-          const whatsappNumber = (typeof waData === 'object' && waData?.value) ? waData.value : (typeof waData === 'string' ? waData : null);
+          const whatsappNumber =
+            typeof waData === "object" && waData?.value
+              ? waData.value
+              : typeof waData === "string"
+              ? waData
+              : null;
           if (!whatsappNumber) {
             setSettingsError(true);
           }
@@ -186,16 +208,22 @@ function OrderPageContent() {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (showBouquetDropdown && !event.target.closest('.bouquet-dropdown-container')) {
+      if (
+        showBouquetDropdown &&
+        !event.target.closest(".bouquet-dropdown-container")
+      ) {
         setShowBouquetDropdown(false);
       }
-      if (showTimeDropdown && !event.target.closest('.time-dropdown-container')) {
+      if (
+        showTimeDropdown &&
+        !event.target.closest(".time-dropdown-container")
+      ) {
         setShowTimeDropdown(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showBouquetDropdown, showTimeDropdown]);
 
   const handleBouquetChange = (bouquetId) => {
@@ -213,37 +241,39 @@ function OrderPageContent() {
 
   const handleQuantityChange = (e) => {
     const value = e.target.value;
-    
+
     // Allow empty input (user is typing)
-    if (value === '') {
-      setFormData({ ...formData, quantity: '' });
-      setQuantityError('');
+    if (value === "") {
+      setFormData({ ...formData, quantity: "" });
+      setQuantityError("");
       return;
     }
-    
+
     const numValue = parseInt(value);
-    
+
     // Check for invalid numbers
     if (isNaN(numValue)) {
-      setQuantityError('Harap masukkan angka yang valid');
+      setQuantityError("Harap masukkan angka yang valid");
       setFormData({ ...formData, quantity: value });
       return;
     }
-    
+
     if (numValue <= 0) {
-      setQuantityError('Jumlah pesanan minimal 1 buket');
+      setQuantityError("Jumlah pesanan minimal 1 buket");
       setFormData({ ...formData, quantity: numValue });
       return;
     }
-    
+
     if (numValue > 500) {
-      setQuantityError('Jumlah pesanan maksimal 500 buket. Untuk pemesanan lebih dari 500, silakan hubungi admin');
+      setQuantityError(
+        "Jumlah pesanan maksimal 500 buket. Untuk pemesanan lebih dari 500, silakan hubungi admin"
+      );
       setFormData({ ...formData, quantity: numValue });
       return;
     }
-    
+
     // Valid quantity
-    setQuantityError('');
+    setQuantityError("");
     setFormData({ ...formData, quantity: numValue });
   };
 
@@ -277,35 +307,52 @@ function OrderPageContent() {
     e.preventDefault();
 
     // Validasi quantity sebelum submit
-    if (!formData.quantity || formData.quantity === '' || formData.quantity <= 0) {
-      setQuantityError('Jumlah pesanan minimal 1 buket');
-      showToast.error('Harap isi jumlah pesanan dengan benar');
+    if (
+      !formData.quantity ||
+      formData.quantity === "" ||
+      formData.quantity <= 0
+    ) {
+      setQuantityError("Jumlah pesanan minimal 1 buket");
+      showToast.error("Harap isi jumlah pesanan dengan benar");
       return;
     }
 
     if (formData.quantity > 500) {
-      setQuantityError('Jumlah pesanan maksimal 500 buket. Untuk pemesanan lebih dari 500, silakan hubungi admin');
-      showToast.error('Jumlah pesanan tidak valid');
+      setQuantityError(
+        "Jumlah pesanan maksimal 500 buket. Untuk pemesanan lebih dari 500, silakan hubungi admin"
+      );
+      showToast.error("Jumlah pesanan tidak valid");
       return;
     }
 
     // Validasi WhatsApp number tersedia
     const waData = settings?.whatsapp_number;
-    const whatsappNumber = (typeof waData === 'object' && waData?.value) ? waData.value : (typeof waData === 'string' ? waData : null);
+    const whatsappNumber =
+      typeof waData === "object" && waData?.value
+        ? waData.value
+        : typeof waData === "string"
+        ? waData
+        : null;
     if (!whatsappNumber) {
-      showToast.error('Nomor WhatsApp belum dikonfigurasi. Tidak dapat melanjutkan pesanan.');
+      showToast.error(
+        "Nomor WhatsApp belum dikonfigurasi. Tidak dapat melanjutkan pesanan."
+      );
       return;
     }
 
     // Validate pickup time is selected and within available slots
     if (!formData.pickup_time) {
-      showToast.error('Harap pilih jam pengambilan');
+      showToast.error("Harap pilih jam pengambilan");
       return;
     }
 
-    const isValidTime = availableTimeSlots.some(slot => slot.value === formData.pickup_time);
+    const isValidTime = availableTimeSlots.some(
+      (slot) => slot.value === formData.pickup_time
+    );
     if (!isValidTime) {
-      showToast.error('Jam pengambilan yang dipilih tidak valid. Silakan pilih ulang.');
+      showToast.error(
+        "Jam pengambilan yang dipilih tidak valid. Silakan pilih ulang."
+      );
       return;
     }
 
@@ -336,10 +383,11 @@ function OrderPageContent() {
 
       const data = await response.json().catch(() => null);
       if (!data) throw new Error("Response tidak valid");
-      if (!data.success) throw new Error(data.message || "Gagal membuat pesanan");
+      if (!data.success)
+        throw new Error(data.message || "Gagal membuat pesanan");
 
       const saved = data.data || data;
-      
+
       // Clear any old cached data before saving new order
       try {
         localStorage.removeItem("lastOrder");
@@ -347,7 +395,7 @@ function OrderPageContent() {
       } catch (err) {
         console.warn("Could not clear old cache", err);
       }
-      
+
       try {
         localStorage.setItem("lastOrder", JSON.stringify(saved));
         const idKey = saved?.order_number || saved?.id || saved?.order_id || "";
@@ -357,11 +405,11 @@ function OrderPageContent() {
       }
 
       // Tidak auto-open WhatsApp, user bisa klik manual di halaman order-success
-      
+
       showToast.success(
         `Pesanan berhasil! Nomor Order: ${saved.order_number || saved.id || ""}`
       );
-      
+
       // Navigate to order-success dengan data order di URL
       // Encode data order ke base64 untuk dikirim via URL
       const orderDataToPass = {
@@ -379,10 +427,12 @@ function OrderPageContent() {
         dp_amount: saved.dp_amount,
         remaining_amount: saved.remaining_amount,
         created_at: saved.created_at,
-        bouquet: saved.bouquet
+        bouquet: saved.bouquet,
       };
-      
-      const encodedData = btoa(encodeURIComponent(JSON.stringify(orderDataToPass)));
+
+      const encodedData = btoa(
+        encodeURIComponent(JSON.stringify(orderDataToPass))
+      );
       router.push(`/order-success?data=${encodedData}`);
     } catch (error) {
       showToast.error(`Error: ${error?.message || error}`);
@@ -400,17 +450,14 @@ function OrderPageContent() {
   };
 
   const payment = useMemo(() => {
-    if (!selectedBouquet) return { dp: 0, remaining: 0, total: 0, subtotal: 0, surcharge: 0 };
+    if (!selectedBouquet) return { dp: 0, remaining: 0, total: 0 };
     const base = parseFloat(selectedBouquet.price) || 0;
     const quantity = parseInt(formData.quantity) || 0;
-    const subtotal = base * quantity;
-    // Biaya admin +Rp 1.000 untuk ShopeePay
-    const surcharge = (formData.payment_method === 'shopeepay' || formData.payment_method?.toLowerCase() === 'shopeepay') ? 1000 : 0;
-    const total = subtotal + surcharge;
+    const total = base * quantity;
     const dp = formData.payment_type === "DP" ? total * 0.3 : total;
     const remaining = formData.payment_type === "DP" ? total - dp : 0;
-    return { dp, remaining, total, subtotal, surcharge };
-  }, [selectedBouquet, formData.payment_type, formData.payment_method, formData.quantity]);
+    return { dp, remaining, total };
+  }, [selectedBouquet, formData.payment_type, formData.quantity]);
 
   return (
     <>
@@ -438,8 +485,18 @@ function OrderPageContent() {
               <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-6 text-center shadow-lg">
                 <div className="flex justify-center mb-4">
                   <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <svg className="w-10 h-10 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    <svg
+                      className="w-10 h-10 text-yellow-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -447,15 +504,27 @@ function OrderPageContent() {
                   Sistem Sedang dalam Pemeliharaan
                 </h3>
                 <p className="text-gray-700 mb-4 max-w-md mx-auto">
-                  Maaf, sistem pemesanan kami sedang dalam proses konfigurasi. Silakan coba lagi dalam beberapa saat atau hubungi kami langsung melalui email.
+                  Maaf, sistem pemesanan kami sedang dalam proses konfigurasi.
+                  Silakan coba lagi dalam beberapa saat atau hubungi kami
+                  langsung melalui email.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-                  <a 
+                  <a
                     href="mailto:vylbouquet@gmail.com"
                     className="inline-flex items-center gap-2 bg-pink-500 hover:bg-pink-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
                     </svg>
                     Hubungi via Email
                   </a>
@@ -463,8 +532,18 @@ function OrderPageContent() {
                     onClick={() => window.location.reload()}
                     className="inline-flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-3 rounded-lg font-medium transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
                     </svg>
                     Muat Ulang Halaman
                   </button>
@@ -482,16 +561,28 @@ function OrderPageContent() {
                   <div className="text-center p-6">
                     <div className="animate-pulse mb-4">
                       <div className="w-12 h-12 bg-pink-200 rounded-full mx-auto flex items-center justify-center">
-                        <svg className="w-6 h-6 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        <svg
+                          className="w-6 h-6 text-pink-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                          />
                         </svg>
                       </div>
                     </div>
-                    <p className="text-gray-700 font-medium">Formulir tidak tersedia</p>
+                    <p className="text-gray-700 font-medium">
+                      Formulir tidak tersedia
+                    </p>
                   </div>
                 </div>
               )}
-              
+
               <form
                 onSubmit={handleSubmit}
                 className="bg-white rounded-lg md:rounded-xl shadow-md md:shadow-lg p-4 sm:p-5 md:p-6 lg:p-8 border border-pink-100"
@@ -532,16 +623,20 @@ function OrderPageContent() {
                     value={formData.quantity}
                     onChange={handleQuantityChange}
                     className={`w-full px-3 py-2.5 md:py-2 border rounded-md focus:ring-2 focus:ring-pink-300 transition-all text-sm sm:text-base touch-target ${
-                      quantityError 
-                        ? 'border-red-300 focus:border-red-400' 
-                        : 'border-pink-200 focus:border-pink-400'
+                      quantityError
+                        ? "border-red-300 focus:border-red-400"
+                        : "border-pink-200 focus:border-pink-400"
                     }`}
                     placeholder="Masukkan jumlah buket"
                   />
                   {quantityError ? (
-                    <p className="text-xs text-red-600 mt-1 font-medium">{quantityError}</p>
+                    <p className="text-xs text-red-600 mt-1 font-medium">
+                      {quantityError}
+                    </p>
                   ) : (
-                    <p className="text-xs text-gray-500 mt-1">Minimal 1, maksimal 500 buket</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Minimal 1, maksimal 500 buket
+                    </p>
                   )}
                 </div>
 
@@ -552,7 +647,9 @@ function OrderPageContent() {
                   <div className="relative bouquet-dropdown-container">
                     <button
                       type="button"
-                      onClick={() => setShowBouquetDropdown(!showBouquetDropdown)}
+                      onClick={() =>
+                        setShowBouquetDropdown(!showBouquetDropdown)
+                      }
                       className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target cursor-pointer bg-white text-left flex items-center justify-between"
                     >
                       <span className="flex items-center gap-2">
@@ -568,21 +665,39 @@ function OrderPageContent() {
                                 />
                               </div>
                             )}
-                            <span className="text-gray-900">{selectedBouquet.name}</span>
+                            <span className="text-gray-900">
+                              {selectedBouquet.name}
+                            </span>
                           </>
                         ) : (
-                          <span className="text-gray-500">Pilih buket yang Anda inginkan</span>
+                          <span className="text-gray-500">
+                            Pilih buket yang Anda inginkan
+                          </span>
                         )}
                       </span>
-                      <svg className={`w-5 h-5 text-gray-400 transition-transform ${showBouquetDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      <svg
+                        className={`w-5 h-5 text-gray-400 transition-transform ${
+                          showBouquetDropdown ? "rotate-180" : ""
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
                     </button>
-                    
+
                     {showBouquetDropdown && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-pink-200 rounded-md shadow-lg max-h-60 overflow-auto">
                         {bouquets.length === 0 ? (
-                          <div className="px-3 py-2 text-sm text-gray-500">Tidak ada buket tersedia</div>
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            Tidak ada buket tersedia
+                          </div>
                         ) : (
                           bouquets.map((bouquet) => (
                             <button
@@ -590,7 +705,9 @@ function OrderPageContent() {
                               type="button"
                               onClick={() => handleBouquetChange(bouquet.id)}
                               className={`w-full px-3 py-2 flex items-center gap-3 hover:bg-pink-50 transition-colors text-left ${
-                                formData.bouquet_id === bouquet.id.toString() ? 'bg-pink-50' : ''
+                                formData.bouquet_id === bouquet.id.toString()
+                                  ? "bg-pink-50"
+                                  : ""
                               }`}
                             >
                               {bouquet.image_url && (
@@ -604,8 +721,12 @@ function OrderPageContent() {
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-gray-900 truncate">{bouquet.name}</div>
-                                <div className="text-xs text-pink-600 font-semibold">{formatPrice(bouquet.price)}</div>
+                                <div className="text-sm font-medium text-gray-900 truncate">
+                                  {bouquet.name}
+                                </div>
+                                <div className="text-xs text-pink-600 font-semibold">
+                                  {formatPrice(bouquet.price)}
+                                </div>
                               </div>
                             </button>
                           ))
@@ -614,11 +735,7 @@ function OrderPageContent() {
                     )}
                   </div>
                   {/* Hidden input for form validation */}
-                  <input
-                    type="hidden"
-                    required
-                    value={formData.bouquet_id}
-                  />
+                  <input type="hidden" required value={formData.bouquet_id} />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-3 md:mb-4">
@@ -639,7 +756,9 @@ function OrderPageContent() {
                       }
                       className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Tidak bisa memilih tanggal kemarin</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Tidak bisa memilih tanggal kemarin
+                    </p>
                   </div>
                   <div>
                     <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
@@ -648,18 +767,39 @@ function OrderPageContent() {
                     <div className="relative time-dropdown-container">
                       <button
                         type="button"
-                        onClick={() => formData.pickup_date && setShowTimeDropdown(!showTimeDropdown)}
+                        onClick={() =>
+                          formData.pickup_date &&
+                          setShowTimeDropdown(!showTimeDropdown)
+                        }
                         disabled={!formData.pickup_date}
                         className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target cursor-pointer bg-white text-left flex items-center justify-between disabled:bg-gray-100 disabled:cursor-not-allowed"
                       >
-                        <span className={formData.pickup_time ? 'text-gray-900' : 'text-gray-500'}>
-                          {formData.pickup_time || 'Pilih jam pengambilan'}
+                        <span
+                          className={
+                            formData.pickup_time
+                              ? "text-gray-900"
+                              : "text-gray-500"
+                          }
+                        >
+                          {formData.pickup_time || "Pilih jam pengambilan"}
                         </span>
-                        <svg className={`w-5 h-5 text-gray-400 transition-transform ${showTimeDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        <svg
+                          className={`w-5 h-5 text-gray-400 transition-transform ${
+                            showTimeDropdown ? "rotate-180" : ""
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
                         </svg>
                       </button>
-                      
+
                       {showTimeDropdown && availableTimeSlots.length > 0 && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-pink-200 rounded-md shadow-lg max-h-60 overflow-auto">
                           {availableTimeSlots.map((slot) => (
@@ -667,11 +807,16 @@ function OrderPageContent() {
                               key={slot.value}
                               type="button"
                               onClick={() => {
-                                setFormData({ ...formData, pickup_time: slot.value });
+                                setFormData({
+                                  ...formData,
+                                  pickup_time: slot.value,
+                                });
                                 setShowTimeDropdown(false);
                               }}
                               className={`w-full px-3 py-2.5 text-left hover:bg-pink-50 transition-colors text-sm ${
-                                formData.pickup_time === slot.value ? 'bg-pink-50 text-pink-600 font-semibold' : 'text-gray-700'
+                                formData.pickup_time === slot.value
+                                  ? "bg-pink-50 text-pink-600 font-semibold"
+                                  : "text-gray-700"
                               }`}
                             >
                               {slot.label} WIB
@@ -687,10 +832,13 @@ function OrderPageContent() {
                       value={formData.pickup_time}
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Jam operasional: 08:00 - 18:00 WIB (minimal 1 jam dari sekarang)
+                      Jam operasional: 08:00 - 18:00 WIB (minimal 1 jam dari
+                      sekarang)
                     </p>
                     {timeError && (
-                      <p className="text-xs text-red-500 mt-1 font-medium">{timeError}</p>
+                      <p className="text-xs text-red-500 mt-1 font-medium">
+                        {timeError}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -797,26 +945,49 @@ function OrderPageContent() {
                     required
                     value={formData.payment_method}
                     onChange={(e) =>
-                      setFormData({ ...formData, payment_method: e.target.value })
+                      setFormData({
+                        ...formData,
+                        payment_method: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target cursor-pointer bg-white"
                   >
                     <option value="">Pilih metode pembayaran</option>
-                    {settings && settings.payment_bca && settings.payment_bca.value && (
-                      <option value="bca">
-                        BCA - {String(settings.payment_bca.value)}{settings.payment_bca.description && typeof settings.payment_bca.description === 'string' ? ` a.n ${settings.payment_bca.description}` : ''}
-                      </option>
-                    )}
-                    {settings && settings.payment_seabank && settings.payment_seabank.value && (
-                      <option value="seabank">
-                        SeaBank - {String(settings.payment_seabank.value)}{settings.payment_seabank.description && typeof settings.payment_seabank.description === 'string' ? ` a.n ${settings.payment_seabank.description}` : ''}
-                      </option>
-                    )}
-                    {settings && settings.payment_shopeepay && settings.payment_shopeepay.value && (
-                      <option value="shopeepay">
-                        ShopeePay - {String(settings.payment_shopeepay.value)}{settings.payment_shopeepay.description && typeof settings.payment_shopeepay.description === 'string' ? ` a.n ${settings.payment_shopeepay.description}` : ''}
-                      </option>
-                    )}
+                    {settings &&
+                      settings.payment_bca &&
+                      settings.payment_bca.value && (
+                        <option value="bca">
+                          BCA - {String(settings.payment_bca.value)}
+                          {settings.payment_bca.description &&
+                          typeof settings.payment_bca.description === "string"
+                            ? ` a.n ${settings.payment_bca.description}`
+                            : ""}
+                        </option>
+                      )}
+                    {settings &&
+                      settings.payment_seabank &&
+                      settings.payment_seabank.value && (
+                        <option value="seabank">
+                          SeaBank - {String(settings.payment_seabank.value)}
+                          {settings.payment_seabank.description &&
+                          typeof settings.payment_seabank.description ===
+                            "string"
+                            ? ` a.n ${settings.payment_seabank.description}`
+                            : ""}
+                        </option>
+                      )}
+                    {settings &&
+                      settings.payment_shopeepay &&
+                      settings.payment_shopeepay.value && (
+                        <option value="shopeepay">
+                          ShopeePay - {String(settings.payment_shopeepay.value)}
+                          {settings.payment_shopeepay.description &&
+                          typeof settings.payment_shopeepay.description ===
+                            "string"
+                            ? ` a.n ${settings.payment_shopeepay.description}`
+                            : ""}
+                        </option>
+                      )}
                   </select>
                 </div>
 
@@ -854,29 +1025,15 @@ function OrderPageContent() {
               {settingsError && (
                 <div className="absolute inset-0 bg-gray-100 bg-opacity-60 backdrop-blur-sm rounded-lg z-10"></div>
               )}
-              
+
               <div className="p-4 md:p-5 bg-pink-50 rounded-lg border border-pink-200 shadow-sm">
                 <h3 className="text-sm sm:text-base font-semibold mb-2 md:mb-3 text-gray-900">
                   Ringkasan Pembayaran
                 </h3>
                 <div className="text-xs sm:text-sm space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Harga Buket</span>
+                    <span className="text-gray-600">Total Harga</span>
                     <span className="font-semibold text-gray-900">
-                      {selectedBouquet ? formatPrice(payment.subtotal) : "Rp ..."}
-                    </span>
-                  </div>
-                  {payment.surcharge > 0 && (
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-gray-600">Biaya Admin ShopeePay</span>
-                      <span className="text-orange-600 font-medium">
-                        + {formatPrice(payment.surcharge)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center pt-2 border-t border-pink-200">
-                    <span className="text-gray-700 font-medium">Total</span>
-                    <span className="font-bold text-gray-900">
                       {selectedBouquet ? formatPrice(payment.total) : "Rp ..."}
                     </span>
                   </div>
@@ -898,6 +1055,7 @@ function OrderPageContent() {
                       </div>
                     </>
                   )}
+                 
                 </div>
               </div>
 
@@ -906,31 +1064,51 @@ function OrderPageContent() {
                   Metode Pembayaran
                 </h3>
                 <div className="text-xs sm:text-sm space-y-2">
-                  {settings && settings.payment_bca && settings.payment_bca.value && (
-                    <div>
-                      <strong>BCA:</strong> {String(settings.payment_bca.value)}
-                      {settings.payment_bca.description && (
-                        <span className="text-gray-600"> a.n {String(settings.payment_bca.description)}</span>
-                      )}
-                    </div>
-                  )}
-                  {settings && settings.payment_seabank && settings.payment_seabank.value && (
-                    <div>
-                      <strong>SeaBank:</strong> {String(settings.payment_seabank.value)}
-                      {settings.payment_seabank.description && (
-                        <span className="text-gray-600"> a.n {String(settings.payment_seabank.description)}</span>
-                      )}
-                    </div>
-                  )}
-                  {settings && settings.payment_shopeepay && settings.payment_shopeepay.value && (
-                    <div>
-                      <strong>ShopeePay:</strong> {String(settings.payment_shopeepay.value)}
-                      {settings.payment_shopeepay.description && (
-                        <span className="text-gray-600"> a.n {String(settings.payment_shopeepay.description)}</span>
-                      )}
-                      <span className="block text-orange-600 font-medium mt-0.5">+ Biaya admin Rp 1.000</span>
-                    </div>
-                  )}
+                  {settings &&
+                    settings.payment_bca &&
+                    settings.payment_bca.value && (
+                      <div>
+                        <strong>BCA:</strong>{" "}
+                        {String(settings.payment_bca.value)}
+                        {settings.payment_bca.description && (
+                          <span className="text-gray-600">
+                            {" "}
+                            a.n {String(settings.payment_bca.description)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  {settings &&
+                    settings.payment_seabank &&
+                    settings.payment_seabank.value && (
+                      <div>
+                        <strong>SeaBank:</strong>{" "}
+                        {String(settings.payment_seabank.value)}
+                        {settings.payment_seabank.description && (
+                          <span className="text-gray-600">
+                            {" "}
+                            a.n {String(settings.payment_seabank.description)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  {settings &&
+                    settings.payment_shopeepay &&
+                    settings.payment_shopeepay.value && (
+                      <div>
+                        <strong>ShopeePay:</strong>{" "}
+                        {String(settings.payment_shopeepay.value)}
+                        {settings.payment_shopeepay.description && (
+                          <span className="text-gray-600">
+                            {" "}
+                            a.n {String(settings.payment_shopeepay.description)}
+                          </span>
+                        )}
+                        <span className="block text-orange-700 text-sm mt-1 font-bold" style={{ fontSize: '1rem' }}>
+                          Catatan: Transfer bank ke ShopeePay dikenakan biaya admin Rp 1.000
+                        </span>
+                      </div>
+                    )}
                 </div>
               </div>
 
@@ -954,7 +1132,7 @@ function OrderPageContent() {
           </div>
         </div>
       </div>
-      
+
       {/* Footer */}
       <Footer />
     </>
@@ -963,11 +1141,13 @@ function OrderPageContent() {
 
 export default function OrderPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+        </div>
+      }
+    >
       <OrderPageContent />
     </Suspense>
   );

@@ -84,10 +84,11 @@ export default function Pagination({
               onChange={(e) => onPerPageChange(Number(e.target.value))}
               className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
             >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
+              <option value={9}>9</option>
+              <option value={18}>18</option>
+              <option value={27}>27</option>
+              <option value={36}>36</option>
+              <option value={45}>45</option>
             </select>
           </div>
         )}
