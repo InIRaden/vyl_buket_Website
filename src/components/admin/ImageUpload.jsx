@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useToast } from '../../hooks/useToast';
 
@@ -9,6 +9,15 @@ export default function ImageUpload({ value, onChange, disabled = false }) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(value || null);
   const fileInputRef = useRef(null);
+
+  // Reset preview when value changes from parent (e.g., modal reopen)
+  useEffect(() => {
+    setPreview(value || null);
+    // Reset file input if value is null
+    if (!value && fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [value]);
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];

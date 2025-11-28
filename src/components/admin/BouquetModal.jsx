@@ -43,10 +43,29 @@ export default function BouquetModal({ isOpen, onClose, mode = 'create', bouquet
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    // Special handling for price input with rupiah formatting
+    if (name === 'price') {
+      // Remove all non-digit characters
+      const numericValue = value.replace(/\D/g, '');
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue,
+      }));
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+  };
+
+  // Format price for display with Rupiah formatting
+  const formatPriceInput = (value) => {
+    if (!value) return '';
+    // Add thousand separators
+    return value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
   const handleImageChange = (url) => {
@@ -145,20 +164,24 @@ export default function BouquetModal({ isOpen, onClose, mode = 'create', bouquet
             {/* Harga */}
             <div>
               <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
-                Harga (Rp) <span className="text-red-500">*</span>
+                Harga <span className="text-red-500">*</span>
               </label>
-              <Input
-                id="price"
-                name="price"
-                type="number"
-                value={formData.price}
-                onChange={handleChange}
-                placeholder="150000"
-                min="0"
-                step="1000"
-                required
-                disabled={loading}
-              />
+              <div className="relative">
+                <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-600 font-medium text-sm sm:text-base z-10">
+                  Rp
+                </span>
+                <input
+                  id="price"
+                  name="price"
+                  type="text"
+                  value={formatPriceInput(formData.price)}
+                  onChange={handleChange}
+                  placeholder="150.000"
+                  className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-400 hover:border-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed touch-target"
+                  required
+                  disabled={loading}
+                />
+              </div>
             </div>
 
             {/* Status Aktif */}
